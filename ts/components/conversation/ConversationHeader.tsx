@@ -13,6 +13,7 @@ import { InContactsIcon } from '../InContactsIcon';
 
 import { LocalizerType } from '../../types/Util';
 import { ColorType } from '../../types/Colors';
+import { ConfirmationModal } from '../ConfirmationModal';
 
 interface TimerOption {
   name: string;
@@ -57,6 +58,7 @@ export interface PropsActionsType {
 
   onArchive: () => void;
   onMoveToInbox: () => void;
+  onLeave: () => void;
 }
 
 export interface PropsHousekeepingType {
@@ -70,7 +72,9 @@ export type PropsType = PropsDataType &
 export class ConversationHeader extends React.Component<PropsType> {
   public showMenuBound: (event: React.MouseEvent<HTMLButtonElement>) => void;
   public menuTriggerRef: React.RefObject<any>;
-
+  state = {
+    confirmingLeave: false
+  };
   public constructor(props: PropsType) {
     super(props);
 
@@ -291,7 +295,7 @@ export class ConversationHeader extends React.Component<PropsType> {
       isArchived,
       leftGroup,
       onDeleteMessages,
-      onResetSession,
+      // onResetSession,
       onSetDisappearingMessages,
       onShowAllMedia,
       onShowGroupMembers,
@@ -322,14 +326,17 @@ export class ConversationHeader extends React.Component<PropsType> {
           </SubMenu>
         ) : null}
         <MenuItem onClick={onShowAllMedia}>{i18n('viewRecentMedia')}</MenuItem>
-        {isGroup ? (
+        {isGroup && !leftGroup ? (
           <MenuItem onClick={onShowGroupMembers}>
             {i18n('showMembers')}
           </MenuItem>
         ) : null}
-       {/*  {isGroup ? (
-          <MenuItem onClick={onRemoveGroupMembers}>
-            {i18n('removeMember')}
+        {/* {isGroup && !leftGroup ? (
+          <MenuItem      
+          onClick={() => this.setState({
+            confirmingLeave: true
+          })}>
+            {i18n('leaveGroup')}
           </MenuItem>
         ) : null} */}
         {!isGroup && !isMe ? (
@@ -337,9 +344,9 @@ export class ConversationHeader extends React.Component<PropsType> {
             {i18n('showSafetyNumber')}
           </MenuItem>
         ) : null}
-        {!isGroup && isAccepted ? (
+        {/* {!isGroup && isAccepted ? (
           <MenuItem onClick={onResetSession}>{i18n('resetSession')}</MenuItem>
-        ) : null}
+        ) : null} */}
         {isArchived ? (
           <MenuItem onClick={onMoveToInbox}>
             {i18n('moveConversationToInbox')}
@@ -355,6 +362,10 @@ export class ConversationHeader extends React.Component<PropsType> {
   public render() {
     const { id } = this.props;
     const triggerId = `conversation-${id}`;
+    const {
+      i18n,
+      onLeave
+    } = this.props;
 
     return (
       <div className="module-conversation-header">
@@ -371,6 +382,26 @@ export class ConversationHeader extends React.Component<PropsType> {
         {this.renderOutgoingAudioCallButton()}
         {this.renderMoreButton(triggerId)}
         {this.renderMenu(triggerId)}
+        {this.state.confirmingLeave && (
+        <ConfirmationModal
+          actions={[
+            {
+              text: i18n(
+                'ConversationDetailsActions--leave-group-modal-confirm'
+              ),
+              action: onLeave,
+              style: 'affirmative',
+            },
+          ]}
+          i18n={i18n}
+          onClose={() => this.setState({
+            confirmingLeave: false
+          })}
+          title={i18n('ConversationDetailsActions--leave-group-modal-title')}
+        >
+          {i18n('ConversationDetailsActions--leave-group-modal-content')}
+        </ConfirmationModal>
+      )}
       </div>
     );
   }

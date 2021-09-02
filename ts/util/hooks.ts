@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ActionCreatorsMapObject, bindActionCreators } from 'redux';
 import { useDispatch } from 'react-redux';
+import { first, last, noop } from 'lodash';
 
 // Restore focus on teardown
 export const useRestoreFocus = (
@@ -40,3 +41,53 @@ export const useBoundActions = <T extends ActionCreatorsMapObject>(
     return bindActionCreators(actions, dispatch);
   }, [dispatch]);
 };
+
+function getTop(element: Readonly<Element>): number {
+  return element.getBoundingClientRect().top;
+}
+
+function isWrapped(element: Readonly<null | HTMLElement>): boolean {
+  if (!element) {
+    return false;
+  }
+
+  const { children } = element;
+  const firstChild = first(children);
+  const lastChild = last(children);
+
+  return Boolean(
+    firstChild &&
+      lastChild &&
+      firstChild !== lastChild &&
+      getTop(firstChild) !== getTop(lastChild)
+  );
+}
+
+export function useHasWrapped<T extends HTMLElement>(): [
+  React.Ref<T>,
+  boolean
+] {
+  const [element, setElement] = React.useState<null | T>(null);
+
+  const [hasWrapped, setHasWrapped] = React.useState(isWrapped(element));
+
+  React.useEffect(() => {
+    if (!element) {
+      return noop;
+    }
+
+    // We can remove this `any` when we upgrade to TypeScript 4.2+, which adds
+    //   `ResizeObserver` type definitions.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const observer = new (window as any).ResizeObserver(() => {
+      setHasWrapped(isWrapped(element));
+    });
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [element]);
+
+  return [setElement, hasWrapped];
+}

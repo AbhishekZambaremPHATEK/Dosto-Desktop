@@ -62,9 +62,9 @@
       return { toastMessage: i18n('youLeftTheGroup') };
     },
   });
-  Whisper.LeftGroupToast = Whisper.ToastView.extend({
+  Whisper.RemovedGroupToast = Whisper.ToastView.extend({
     render_attributes() {
-      return { toastMessage: i18n('youRemovedFromTheGroup') };
+      return { toastMessage: i18n('youRemovedFromTheGroup2') };
     },
   });
   Whisper.OriginalNotFoundToast = Whisper.ToastView.extend({
@@ -102,6 +102,11 @@
       return { toastMessage: i18n('conversationReturnedToInbox') };
     },
   });
+  Whisper.DeleteForEveryoneFailedToast = Whisper.ToastView.extend({
+    render_attributes() {
+        return { toastMessage: i18n('deleteForEveryoneFailed') };
+    },
+});
   Whisper.TapToViewExpiredIncomingToast = Whisper.ToastView.extend({
     render_attributes() {
       return {
@@ -268,6 +273,7 @@
         this.downloadAttachmentWrapper
       );
       this.listenTo(this.model, 'delete-message', this.deleteMessage);
+      // this.listenTo(this.model, 'delete-message-everyone', this.deleteMessageForEveryone);
       this.listenTo(this.model, 'remove-link-review', this.removeLinkPreview);
       this.listenTo(
         this.model,
@@ -284,6 +290,7 @@
       );
       this.listenTo(this.model.messageCollection, 'force-send', this.forceSend);
       this.listenTo(this.model.messageCollection, 'delete', this.deleteMessage);
+      // this.listenTo(this.model.messageCollection, 'delete-everyone', this.deleteMessageForEveryone);
       this.listenTo(
         this.model.messageCollection,
         'show-visual-attachment',
@@ -373,7 +380,7 @@
           ...this.model.cachedProps,
 
           leftGroup: this.model.get('left'),
-
+          onLeave:this.leaveGroup.bind(this), 
           expirationSettingName,
           showBackButton: Boolean(this.panels && this.panels.length),
           timerOptions: Whisper.ExpirationTimerOptions.map(item => ({
@@ -450,7 +457,7 @@
       };
       this.titleView = new Whisper.ReactWrapperView({
         className: 'title-wrapper',
-        Component: window.Signal.Components.ConversationHeader,
+        Component: window.Signal.Components.ConversationHeader, 
         props: getHeaderProps(this.model),
       });
       this.updateHeader = () => this.titleView.update(getHeaderProps());
@@ -478,6 +485,7 @@
         onPickSticker: (packId, stickerId) =>
           this.sendStickerMessage({ packId, stickerId }),
         onSubmit: message => this.sendMessage(message),
+        onScrollToMessage: messageId => this.scrollToMessage(messageId),
         onEditorStateChange: (msg, caretLocation) =>
           this.onEditorStateChange(msg, caretLocation),
         onTextTooLong: () => this.showToast(Whisper.MessageBodyTooLongToast),
@@ -533,6 +541,9 @@
       };
       const deleteMessage = messageId => {
         this.deleteMessage(messageId);
+      };
+      const deleteMessageForEveryone = (messageId) => {
+        this.deleteMessageForEveryone(messageId);
       };
       const showMessageDetail = messageId => {
         this.showMessageDetail(messageId);
@@ -712,7 +723,7 @@
         className: 'timeline-wrapper',
         JSX: Signal.State.Roots.createTimeline(window.reduxStore, {
           id,
-
+          deleteMessageForEveryone,
           deleteMessage,
           displayTapToViewMessage,
           downloadAttachment,
@@ -2025,10 +2036,11 @@
 
     async showMembers(e, providedMembers, options = {}) {
       _.defaults(options, { needVerify: false });
-
+ window.log.info("model while removing",this.model.get('groupId'))
       const model = providedMembers || this.model.contactCollection;
       const view = new Whisper.GroupMemberList({
         model,
+        groupModel:this.model,
         // we pass this in to allow nested panels
         listenBack: this.listenBack.bind(this),
         needVerify: options.needVerify,
@@ -2050,6 +2062,18 @@
 
       this.listenBack(view);
     }, */
+
+    async leaveGroup(){
+      window.log.info('leaveGroup 1234 log',this.model);
+      try {
+        await this.model.leaveGroup();
+      } catch (error) {
+        window.log.error(
+          'Error while remove member',
+          error
+        );
+      }
+    },
     forceSend({ contactId, messageId }) {
       const contact = ConversationController.get(contactId);
       const message = this.model.messageCollection.get(messageId);
@@ -2228,16 +2252,58 @@
       const dialog = new Whisper.ConfirmationDialogView({
         message: i18n('deleteWarning'),
         okText: i18n('delete'),
-        resolve: () => {
-          window.Signal.Data.removeMessage(message.id, {
-            Message: Whisper.Message,
-          });
-          message.trigger('unload');
-          this.model.messageCollection.remove(message.id);
-          if (message.isOutgoing()) {
-            this.model.decrementSentMessageCount();
-          } else {
-            this.model.decrementMessageCount();
+        resolve: async () => {
+          try {
+            await this.model.sendDeleteForMeMessage(message.get('sent_at'));
+
+            window.Signal.Data.removeMessage(message.id, {
+              Message: Whisper.Message,
+            });
+            message.trigger('unload');
+            this.model.messageCollection.remove(message.id);
+            if (message.isOutgoing()) {
+              this.model.decrementSentMessageCount();
+            } else {
+              this.model.decrementMessageCount();
+            }
+          } catch (error) {
+            window.log.error(
+              'Error sending delete-for me',
+              error,
+              messageId
+            );
+            // this.showToast(Whisper.DeleteForEveryoneFailedToast);
+          }
+          this.resetPanel();
+        },
+      });
+
+      this.$el.prepend(dialog.el);
+      dialog.focusCancel();
+    },
+
+    deleteMessageForEveryone(messageId) {
+      const message = this.model.messageCollection.get(messageId);
+      if (!message) {
+        throw new Error(
+          `deleteMessageForEveryone: Did not find message for id ${messageId}`
+        );
+      }
+  
+      const dialog = new Whisper.ConfirmationDialogView({
+        confirmStyle: 'negative',
+        message: window.i18n('deleteForEveryoneWarning'),
+        okText: window.i18n('delete'),
+        resolve: async () => {
+          try {
+            await this.model.sendDeleteForEveryoneMessage(message.get('sent_at'));
+          } catch (error) {
+            window.log.error(
+              'Error sending delete-for-everyone',
+              error,
+              messageId
+            );
+            this.showToast(Whisper.DeleteForEveryoneFailedToast);
           }
           this.resetPanel();
         },
@@ -2557,10 +2623,10 @@
         const contacts = await this.getUntrustedContacts(options);
 
         if (contacts && contacts.length) {
-          const sendAnyway = await this.showSendAnywayDialog(contacts);
-          if (sendAnyway) {
+          // const sendAnyway = await this.showSendAnywayDialog(contacts);
+          // if (sendAnyway) {
             this.sendStickerMessage({ ...options, force: true });
-          }
+          // }
 
           return;
         }
@@ -2704,14 +2770,14 @@
         this.disableMessageField();
 
         if (contacts && contacts.length) {
-          const sendAnyway = await this.showSendAnywayDialog(contacts);
-          if (sendAnyway) {
+          // const sendAnyway = await this.showSendAnywayDialog(contacts);
+          // if (sendAnyway) {
             this.sendMessage(message, { force: true });
             return;
-          }
+          // }
 
-          this.focusMessageFieldAndClearDisabled();
-          return;
+          // this.focusMessageFieldAndClearDisabled();
+          // return;
         }
       } catch (error) {
         this.focusMessageFieldAndClearDisabled();
@@ -2743,6 +2809,9 @@
       }
       if (!this.model.isPrivate() && this.model.get('left')) {
         ToastView = Whisper.LeftGroupToast;
+      }
+      if (this.model.get('lastMessage') && this.model.get('lastMessage').search("removed you from the group.")!=-1){
+        ToastView = Whisper.RemovedGroupToast;
       }
       if (message.length > MAX_MESSAGE_BODY_LENGTH) {
         ToastView = Whisper.MessageBodyTooLongToast;

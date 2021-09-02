@@ -1,9 +1,9 @@
 {
-  "serverUrl": "https://prodhowzit.observanteye.com",
+  "serverUrl": "https://howzit.observanteye.com",
   "storageUrl": "https://storage-staging.dosto.org",
   "cdn": {
-    "0": "https://prodhowzit.observanteye.com:9000/howzit-bucket",
-    "2": "https://prodhowzit.observanteye.com:9000/howzit-bucket"
+    "0": "https://howzit.observanteye.com:9000/howzit-bucket",
+    "2": "https://howzit.observanteye.com:9000/howzit-bucket"
   },
   "serverPublicParams": "",
   "serverTrustRoot": "BWh+UOhT1hD8bkb+MFRvb6tVqhoG8YYGCzOd7mgjo8cV",

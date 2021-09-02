@@ -48,6 +48,8 @@ declare global {
     messageRequestResponseType?: number;
     proto?: any;
     read?: any;
+    delete?: any;
+    clearChat?: any;
     reason?: any;
     sender?: any;
     senderDevice?: any;
@@ -1248,7 +1250,9 @@ class MessageReceiverInner extends EventTarget {
     envelope: EnvelopeClass,
     plaintext: ArrayBuffer
   ) {
+    
     const content = window.textsecure.protobuf.Content.decode(plaintext);
+    window.log.info('all message type content', content);
     if (content.syncMessage) {
       return this.handleSyncMessage(envelope, content.syncMessage);
     } else if (content.dataMessage) {
@@ -1367,6 +1371,8 @@ class MessageReceiverInner extends EventTarget {
     envelope: EnvelopeClass,
     syncMessage: SyncMessageClass
   ) {
+    
+
     const unidentified = syncMessage.sent
       ? syncMessage.sent.unidentifiedStatus || []
       : [];
@@ -1391,6 +1397,12 @@ class MessageReceiverInner extends EventTarget {
     if (envelope.sourceDevice == this.deviceId) {
       throw new Error('Received sync message from our own device');
     }
+
+    window.log.info(
+      'printing sync message',
+      syncMessage
+    );
+    
     if (syncMessage.sent) {
       const sentMessage = syncMessage.sent;
 
@@ -1426,7 +1438,13 @@ class MessageReceiverInner extends EventTarget {
     } else if (syncMessage.read && syncMessage.read.length) {
       window.log.info('read messages from', this.getEnvelopeId(envelope));
       return this.handleRead(envelope, syncMessage.read);
-    } else if (syncMessage.verified) {
+    } else if (syncMessage.delete && syncMessage.delete.length) {
+      window.log.info('delete messages from', syncMessage.delete);
+      return this.handleDelete(envelope, syncMessage.delete);
+    }else if (syncMessage.clearChat) {
+      window.log.info('clearChat messages from', syncMessage.clearChat);
+      return this.handleClearChat(envelope, syncMessage.clearChat);
+    }else if (syncMessage.verified) {
       return this.handleVerified(envelope, syncMessage.verified);
     } else if (syncMessage.configuration) {
       return this.handleConfiguration(envelope, syncMessage.configuration);
@@ -1585,6 +1603,56 @@ class MessageReceiverInner extends EventTarget {
     }
     return Promise.all(results);
   }
+  async handleDelete(
+    envelope: EnvelopeClass,
+    Delete: Array<SyncMessageClass.Delete>
+  ) {
+    const results = [];
+    for (let i = 0; i < Delete.length; i += 1) {
+      const ev = new Event('deleteSync');
+      ev.confirm = this.removeFromCache.bind(this, envelope);
+      ev.timestamp = envelope.timestamp.toNumber();
+      ev.delete = {
+        envelopeTimestamp: envelope.timestamp.toNumber(),
+        timestamp: Delete[i].timestamp.toNumber(),
+        senderE164: Delete[i].senderE164,
+        senderUuid: Delete[i].senderUuid,
+        groupId : Delete[i].groupId ? Delete[i].groupId.toString('binary') : null
+      };
+      window.normalizeUuids(
+        ev,
+        ['delete.senderUuid'],
+        'message_receiver::handleDelete'
+      );
+      results.push(this.dispatchAndWait(ev));
+    }
+    return Promise.all(results);
+  }
+
+
+  async handleClearChat(
+    envelope: EnvelopeClass,
+    Delete: SyncMessageClass.ClearChat
+  ) {
+    const results = [];
+    const ev = new Event('clearChatSync');
+    ev.confirm = this.removeFromCache.bind(this, envelope);
+    ev.timestamp = envelope.timestamp.toNumber();
+    ev.delete = {
+      envelopeTimestamp: envelope.timestamp.toNumber(),
+      senderE164: Delete.senderE164,
+      senderUuid: Delete.senderUuid,
+      groupId : Delete.groupId ? Delete.groupId.toString('binary') : null
+    };
+    window.normalizeUuids(
+      ev,
+      ['clearChat.senderUuid'],
+      'message_receiver::handleClearChat'
+    );
+    results.push(this.dispatchAndWait(ev));
+    return Promise.all(results);
+  }
+  
   handleContacts(envelope: EnvelopeClass, contacts: SyncMessageClass.Contacts) {
     window.log.info('contact sync');
     const { blob } = contacts;

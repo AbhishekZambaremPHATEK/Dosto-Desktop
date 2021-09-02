@@ -722,6 +722,8 @@ export declare class SyncMessageClass {
   groups?: SyncMessageClass.Groups;
   request?: SyncMessageClass.Request;
   read?: Array<SyncMessageClass.Read>;
+  delete?: Array<SyncMessageClass.Delete>;
+  clearChat?: SyncMessageClass.ClearChat;
   blocked?: SyncMessageClass.Blocked;
   verified?: VerifiedClass;
   configuration?: SyncMessageClass.Configuration;
@@ -731,6 +733,7 @@ export declare class SyncMessageClass {
   messageRequestResponse?: SyncMessageClass.MessageRequestResponse;
   fetchLatest?: SyncMessageClass.FetchLatest;
   keys?: SyncMessageClass.Keys;
+  silent: boolean;
 }
 
 // Note: we need to use namespaces to express nested classes in Typescript
@@ -758,6 +761,18 @@ export declare namespace SyncMessageClass {
     senderUuid?: string;
     timestamp?: ProtoBigNumberType;
   }
+  class Delete {
+    senderE164?: string;
+    senderUuid?: string;
+    timestamp?: ProtoBigNumberType;
+    groupId?:ProtoBinaryType
+  }
+  class ClearChat {
+    senderE164?: string;
+    senderUuid?: string;
+    groupId?:ProtoBinaryType
+  }
+  
   class Request {
     type?: number;
   }
@@ -940,6 +955,8 @@ export class OfferMessageClass {
   callId?: CallId;
   type?: OfferType;
   sdp?: string;
+  // isCall?:Boolean;
+  // isSilent?:Boolean;
 }
 
 export enum OfferType {

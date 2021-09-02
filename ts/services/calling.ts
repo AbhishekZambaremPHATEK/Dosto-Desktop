@@ -5,12 +5,18 @@ import {
   CallLogLevel,
   CallSettings,
   CallState,
+  CanvasVideoRenderer,
   DeviceId,
+  GumVideoCapturer,
   RingRTC,
   UserId,
   VideoCapturer,
   VideoRenderer,
+  // BandwidthMode,
+  // HangupMessage,
+  // CallingMessage,
 } from 'ringrtc';
+// import { dropNull, shallowDropNull } from '../util/dropNull';
 import {
   ActionsType as UxActionsType,
   CallDetailsType,
@@ -18,6 +24,12 @@ import {
 import { CallingMessageClass, EnvelopeClass } from '../textsecure.d';
 import { ConversationModelType } from '../model-types.d';
 import is from '@sindresorhus/is';
+import { AudioDevice, MediaDeviceSettings } from '../types/Calling';
+import {
+  REQUESTED_VIDEO_WIDTH,
+  REQUESTED_VIDEO_HEIGHT,
+  REQUESTED_VIDEO_FRAMERATE,
+} from '../calling/constants';
 
 export {
   CallState,
@@ -37,6 +49,265 @@ export type CallHistoryDetailsType = {
 
 export class CallingClass {
   private uxActions?: UxActionsType;
+  private deviceReselectionTimer?: NodeJS.Timeout;
+  readonly videoCapturer: GumVideoCapturer;
+  readonly videoRenderer: CanvasVideoRenderer;
+  private lastMediaDeviceSettings?: MediaDeviceSettings;
+
+  constructor() {
+    this.videoCapturer = new GumVideoCapturer(
+      REQUESTED_VIDEO_WIDTH,
+      REQUESTED_VIDEO_HEIGHT,
+      REQUESTED_VIDEO_FRAMERATE,
+    );
+    this.videoRenderer = new CanvasVideoRenderer();
+  }
+  private async startDeviceReselectionTimer(): Promise<void> {
+    // Poll once
+    await this.pollForMediaDevices();
+    // Start the timer
+    if (!this.deviceReselectionTimer) {
+      this.deviceReselectionTimer = setInterval(async () => {
+        await this.pollForMediaDevices();
+      }, 3000);
+    }
+  }
+
+  private mediaDeviceSettingsEqual(
+    a?: MediaDeviceSettings,
+    b?: MediaDeviceSettings
+  ): boolean {
+    if (!a && !b) {
+      return true;
+    }
+    if (!a || !b) {
+      return false;
+    }
+    if (
+      a.availableCameras.length !== b.availableCameras.length ||
+      a.availableMicrophones.length !== b.availableMicrophones.length ||
+      a.availableSpeakers.length !== b.availableSpeakers.length
+    ) {
+      return false;
+    }
+    for (let i = 0; i < a.availableCameras.length; i += 1) {
+      if (
+        a.availableCameras[i].deviceId !== b.availableCameras[i].deviceId ||
+        a.availableCameras[i].groupId !== b.availableCameras[i].groupId ||
+        a.availableCameras[i].label !== b.availableCameras[i].label
+      ) {
+        return false;
+      }
+    }
+    for (let i = 0; i < a.availableMicrophones.length; i += 1) {
+      if (
+        a.availableMicrophones[i].name !== b.availableMicrophones[i].name ||
+        a.availableMicrophones[i].uniqueId !==
+          b.availableMicrophones[i].uniqueId
+      ) {
+        return false;
+      }
+    }
+    for (let i = 0; i < a.availableSpeakers.length; i += 1) {
+      if (
+        a.availableSpeakers[i].name !== b.availableSpeakers[i].name ||
+        a.availableSpeakers[i].uniqueId !== b.availableSpeakers[i].uniqueId
+      ) {
+        return false;
+      }
+    }
+    if (
+      (a.selectedCamera && !b.selectedCamera) ||
+      (!a.selectedCamera && b.selectedCamera) ||
+      (a.selectedMicrophone && !b.selectedMicrophone) ||
+      (!a.selectedMicrophone && b.selectedMicrophone) ||
+      (a.selectedSpeaker && !b.selectedSpeaker) ||
+      (!a.selectedSpeaker && b.selectedSpeaker)
+    ) {
+      return false;
+    }
+    if (
+      a.selectedCamera &&
+      b.selectedCamera &&
+      a.selectedCamera !== b.selectedCamera
+    ) {
+      return false;
+    }
+    if (
+      a.selectedMicrophone &&
+      b.selectedMicrophone &&
+      a.selectedMicrophone.index !== b.selectedMicrophone.index
+    ) {
+      return false;
+    }
+    if (
+      a.selectedSpeaker &&
+      b.selectedSpeaker &&
+      a.selectedSpeaker.index !== b.selectedSpeaker.index
+    ) {
+      return false;
+    }
+    return true;
+  }
+  
+  private async selectPreferredDevices(
+    settings: MediaDeviceSettings
+  ): Promise<void> {
+    if (
+      (!this.lastMediaDeviceSettings && settings.selectedCamera) ||
+      (this.lastMediaDeviceSettings &&
+        settings.selectedCamera &&
+        this.lastMediaDeviceSettings.selectedCamera !== settings.selectedCamera)
+    ) {
+      window.log.info('MediaDevice: selecting camera', settings.selectedCamera);
+      await this.videoCapturer.setPreferredDevice(settings.selectedCamera);
+    }
+
+    // Assume that the MediaDeviceSettings have been obtained very recently and
+    // the index is still valid (no devices have been plugged in in between).
+    if (settings.selectedMicrophone) {
+      window.log.info(
+        'MediaDevice: selecting microphone',
+        settings.selectedMicrophone
+      );
+      RingRTC.setAudioInput(settings.selectedMicrophone.index);
+    }
+
+    if (settings.selectedSpeaker) {
+      window.log.info(
+        'MediaDevice: selecting speaker',
+        settings.selectedSpeaker
+      );
+      RingRTC.setAudioOutput(settings.selectedSpeaker.index);
+    }
+  }
+  
+  private async pollForMediaDevices(): Promise<void> {
+    const newSettings = await this.getMediaDeviceSettings();
+    if (
+      !this.mediaDeviceSettingsEqual(this.lastMediaDeviceSettings, newSettings)
+    ) {
+      window.log.info(
+        'MediaDevice: available devices changed (from->to)',
+        this.lastMediaDeviceSettings,
+        newSettings
+      );
+
+      await this.selectPreferredDevices(newSettings);
+      this.lastMediaDeviceSettings = newSettings;
+      this.uxActions?.refreshIODevices(newSettings);
+    }
+  }
+
+  findBestMatchingDeviceIndex(
+    available: Array<AudioDevice>,
+    preferred: AudioDevice | undefined
+  ): number | undefined {
+    if (preferred) {
+      // Match by uniqueId first, if available
+      if (preferred.uniqueId) {
+        const matchIndex = available.findIndex(
+          d => d.uniqueId === preferred.uniqueId
+        );
+        if (matchIndex !== -1) {
+          return matchIndex;
+        }
+      }
+      // Match by name second
+      const matchingNames = available.filter(d => d.name === preferred.name);
+      if (matchingNames.length > 0) {
+        return matchingNames[0].index;
+      }
+    }
+    // Nothing matches or no preference; take the first device if there are any
+    return available.length > 0 ? 0 : undefined;
+  }
+
+  findBestMatchingCamera(
+    available: Array<MediaDeviceInfo>,
+    preferred?: string
+  ): string | undefined {
+    const matchingId = available.filter(d => d.deviceId === preferred);
+    const nonInfrared = available.filter(d => !d.label.includes('IR Camera'));
+
+    // By default, pick the first non-IR camera (but allow the user to pick the
+    // infrared if they so desire)
+    if (matchingId.length > 0) {
+      return matchingId[0].deviceId;
+    }
+    if (nonInfrared.length > 0) {
+      return nonInfrared[0].deviceId;
+    }
+
+    return undefined;
+  }
+
+  async getMediaDeviceSettings(): Promise<MediaDeviceSettings> {
+    const availableMicrophones = RingRTC.getAudioInputs();
+    const preferredMicrophone = window.storage.get(
+      'preferred-audio-input-device'
+    );
+    const selectedMicIndex = this.findBestMatchingDeviceIndex(
+      availableMicrophones,
+      preferredMicrophone
+    );
+    const selectedMicrophone =
+      selectedMicIndex !== undefined
+        ? availableMicrophones[selectedMicIndex]
+        : undefined;
+
+    const availableSpeakers = RingRTC.getAudioOutputs();
+    const preferredSpeaker = window.storage.get(
+      'preferred-audio-output-device'
+    );
+    const selectedSpeakerIndex = this.findBestMatchingDeviceIndex(
+      availableSpeakers,
+      preferredSpeaker
+    );
+    const selectedSpeaker =
+      selectedSpeakerIndex !== undefined
+        ? availableSpeakers[selectedSpeakerIndex]
+        : undefined;
+
+    const availableCameras = await this.videoCapturer.enumerateDevices();
+    const preferredCamera = window.storage.get('preferred-video-input-device');
+    const selectedCamera = this.findBestMatchingCamera(
+      availableCameras,
+      preferredCamera
+    );
+
+    return {
+      availableMicrophones,
+      availableSpeakers,
+      selectedMicrophone,
+      selectedSpeaker,
+      availableCameras,
+      selectedCamera,
+    };
+  }
+
+
+  async setPreferredCamera(device: string): Promise<void> {
+    window.log.info('MediaDevice: setPreferredCamera', device);
+    window.storage.put('preferred-video-input-device', device);
+    this.setOutgoingVideo(device,true)
+    await this.videoCapturer.setPreferredDevice(device);
+  }
+
+  setPreferredMicrophone(device: AudioDevice): void {
+    window.log.info('MediaDevice: setPreferredMicrophone', device);
+    window.storage.put('preferred-audio-input-device', device);
+    this.setOutgoingAudio(device.index,true)
+    RingRTC.setAudioInput(device.index);
+
+  }
+
+  setPreferredSpeaker(device: AudioDevice): void {
+    window.log.info('MediaDevice: setPreferredSpeaker', device);
+    window.storage.put('preferred-audio-output-device', device);
+    RingRTC.setAudioOutput(device.index);
+    
+  }
 
   initialize(uxActions: UxActionsType): void {
     this.uxActions = uxActions;
@@ -106,17 +377,28 @@ export class CallingClass {
       await this.getCallSettings(conversation)
     );
 
+    RingRTC.setOutgoingAudio(call.callId, true);
+    RingRTC.setVideoCapturer(call.callId, this.videoCapturer);
+    RingRTC.setVideoRenderer(call.callId, this.videoRenderer);
     this.attachToCall(conversation, call);
+
+    await this.startDeviceReselectionTimer();
 
     this.uxActions.outgoingCall({
       callDetails: this.getUxCallDetails(conversation, call),
     });
+
+
   }
 
   async accept(callId: CallId, asVideoCall: boolean) {
     const haveMediaPermissions = await this.requestPermissions(asVideoCall);
     if (haveMediaPermissions) {
+      await this.startDeviceReselectionTimer();
+      RingRTC.setVideoCapturer(callId, this.videoCapturer);
+      RingRTC.setVideoRenderer(callId, this.videoRenderer);
       RingRTC.accept(callId, asVideoCall);
+    
     } else {
       window.log.info('Permissions were denied, call not allowed, hanging up.');
       RingRTC.hangup(callId);
@@ -146,6 +428,67 @@ export class CallingClass {
   setVideoRenderer(callId: CallId, renderer: VideoRenderer | null) {
     RingRTC.setVideoRenderer(callId, renderer);
   }
+
+  // async protoToCallingMessage({
+  //   offer,
+  //   answer,
+  //   iceCandidates,
+  //   legacyHangup,
+  //   busy,
+  //   hangup,
+  //   supportsMultiRing,
+  //   destinationDeviceId,
+  //   opaque,
+  // }: any) {
+  //   return {
+  //     offer: offer
+  //       ? {
+  //           ...shallowDropNull(offer),
+  
+  //           type: dropNull(offer.type) as number,
+  //           opaque: offer.opaque ? Buffer.from(offer.opaque) : undefined,
+  //         }
+  //       : undefined,
+  //     answer: answer
+  //       ? {
+  //           ...shallowDropNull(answer),
+  //           opaque: answer.opaque ? Buffer.from(answer.opaque) : undefined,
+  //         }
+  //       : undefined,
+  //     iceCandidates: iceCandidates
+  //       ? iceCandidates.map((candidate: { opaque: ArrayBuffer | SharedArrayBuffer; }) => {
+  //           return {
+  //             ...shallowDropNull(candidate),
+  //             opaque: candidate.opaque
+  //               ? Buffer.from(candidate.opaque)
+  //               : undefined,
+  //           };
+  //         })
+  //       : undefined,
+  //     legacyHangup: legacyHangup
+  //       ? {
+  //           ...shallowDropNull(legacyHangup),
+  //           type: dropNull(legacyHangup.type) as number,
+  //         }
+  //       : undefined,
+  //     busy: shallowDropNull(busy),
+  //     hangup: hangup
+  //       ? {
+  //           ...shallowDropNull(hangup),
+  //           type: dropNull(hangup.type) as number,
+  //         }
+  //       : undefined,
+  //     supportsMultiRing: dropNull(supportsMultiRing),
+  //     destinationDeviceId: dropNull(destinationDeviceId),
+  //     opaque: opaque
+  //       ? {
+  //           data: opaque.data ? Buffer.from(opaque.data) : undefined,
+  //         }
+  //       : undefined,
+  //   };
+  // }
+  
+
 
   async handleCallingMessage(
     envelope: EnvelopeClass,
@@ -178,13 +521,65 @@ export class CallingClass {
     window.log.info('localDeviceId print:--',this.localDeviceId)
     window.log.info('callingMessage print:--',callingMessage)
 
+    // RingRTC.handleCallingMessage(
+    //   remoteUserId,
+    //   remoteDeviceId,
+    //   this.localDeviceId,
+    //   messageAgeSec,
+    //   callingMessage
+    // );
+    // const sourceUuid = envelope.sourceUuid
+    // ? uuidToArrayBuffer(envelope.sourceUuid)
+    // : null;
+
+
+    const senderIdentityRecord = window.textsecure.storage.protocol.getIdentityRecord(
+      remoteUserId
+    );
+    if (!senderIdentityRecord) {
+      window.log.error(
+        'Missing sender identity record; ignoring call message.'
+      );
+      return;
+    }
+    const senderIdentityKey = senderIdentityRecord.publicKey.slice(1); // Ignore the type header, it is not used.
+
+    const ourIdentifier =
+      window.textsecure.storage.user.getUuid() ||
+      window.textsecure.storage.user.getNumber();
+    // assert(ourIdentifier, 'We should have either uuid or number');
+
+    const receiverIdentityRecord = window.textsecure.storage.protocol.getIdentityRecord(
+      ourIdentifier
+    );
+    if (!receiverIdentityRecord) {
+      window.log.error(
+        'Missing receiver identity record; ignoring call message.'
+      );
+      return;
+    }
+    const receiverIdentityKey = receiverIdentityRecord.publicKey.slice(1); // Ignore the type header, it is not used.
+
+
+    // RingRTC.handleCallingMessage(
+    //   remoteUserId,
+    //   remoteDeviceId,
+    //   this.localDeviceId,
+    //   messageAgeSec,
+    //   await this.protoToCallingMessage(callingMessage),
+    //   Buffer.from(senderIdentityKey),
+    //   Buffer.from(receiverIdentityKey)
+    // );
     RingRTC.handleCallingMessage(
       remoteUserId,
       remoteDeviceId,
       this.localDeviceId,
       messageAgeSec,
-      callingMessage
+      callingMessage,
+      senderIdentityKey,
+      receiverIdentityKey
     );
+
   }
 
   private async requestCameraPermissions(): Promise<boolean> {
@@ -396,6 +791,30 @@ export class CallingClass {
     return null;
   }
 
+  // private async getCallSettings(
+  //   conversation: ConversationModelType
+  // ): Promise<CallSettings> {
+  //   if (!window.textsecure.messaging) {
+  //     throw new Error('getCallSettings: offline!');
+  //   }
+
+  //   const iceServerJson = await window.textsecure.messaging.server.getIceServers();
+  //   window.log.info('iceServerJson print:--',JSON.parse(iceServerJson))
+
+  //   const shouldRelayCalls = Boolean(await window.getAlwaysRelayCalls());
+
+  //   // If the peer is 'unknown', i.e. not in the contact list, force IP hiding.
+  //   const isContactUnknown = !conversation.isFromOrAddedByTrustedContact();
+  //   window.log.info('isContactUnknown print:--',isContactUnknown)
+
+  //   return {
+  //     ///iceServer: {username: "kailasshimpi143@gmail.com", password: "admin@123", urls: ["turn:numb.viagenie.ca"]},
+  //     iceServer:JSON.parse(iceServerJson),
+  //     hideIp: shouldRelayCalls || isContactUnknown,
+  //   };
+  // }
+
+
   private async getCallSettings(
     conversation: ConversationModelType
   ): Promise<CallSettings> {
@@ -404,18 +823,16 @@ export class CallingClass {
     }
 
     const iceServerJson = await window.textsecure.messaging.server.getIceServers();
-    window.log.info('iceServerJson print:--',JSON.parse(iceServerJson))
 
     const shouldRelayCalls = Boolean(await window.getAlwaysRelayCalls());
 
     // If the peer is 'unknown', i.e. not in the contact list, force IP hiding.
     const isContactUnknown = !conversation.isFromOrAddedByTrustedContact();
-    window.log.info('isContactUnknown print:--',isContactUnknown)
 
     return {
-      ///iceServer: {username: "kailasshimpi143@gmail.com", password: "admin@123", urls: ["turn:numb.viagenie.ca"]},
-      iceServer:JSON.parse(iceServerJson),
+      iceServer: JSON.parse(iceServerJson),
       hideIp: shouldRelayCalls || isContactUnknown,
+      // bandwidthMode: BandwidthMode.Normal,
     };
   }
 

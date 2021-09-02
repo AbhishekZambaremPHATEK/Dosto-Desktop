@@ -237,7 +237,7 @@ message DataMessage {
   optional uint32             requiredProtocolVersion = 12;
   optional bool               isViewOnce              = 14;
   optional Reaction           reaction                = 16;
-  optional Delete             delete                  = 17;
+  optional Delete             delete                  = 18;
 }
 
 message NullMessage {
@@ -334,6 +334,18 @@ message SyncMessage {
     optional uint64 timestamp  = 2;
   }
 
+  message Delete {
+      optional string senderE164 = 1;
+      optional string senderUuid = 3;
+      optional uint64 timestamp  = 2;
+      optional bytes  groupId   = 4;
+    }
+
+  message ClearChat {
+    optional string senderE164 = 1;
+    optional string senderUuid = 2;
+    optional bytes  groupId   = 3;
+    }
   message Configuration {
     optional bool   readReceipts                   = 1;
     optional bool   unidentifiedDeliveryIndicators = 2;
@@ -398,6 +410,8 @@ message SyncMessage {
   optional FetchLatest            fetchLatest            = 12;
   optional Keys                   keys                   = 13;
   optional MessageRequestResponse messageRequestResponse = 14;
+  repeated Delete                 delete                 = 15;
+  optional ClearChat            clearChat            = 16;
 }
 
 message AttachmentPointer {
@@ -437,6 +451,7 @@ message GroupContext {
   message RemovedMember {
 optional string removedMemberUuid = 1;
 optional string removedMembere164 = 2;
+
 }
 
   optional bytes             id          = 1;
@@ -447,6 +462,7 @@ optional string removedMembere164 = 2;
   optional AttachmentPointer avatar      = 5;
   optional RemovedMember  removedMember  =  7;
   optional string       RemovedMembersE164 = 8;
+
 }
 
 

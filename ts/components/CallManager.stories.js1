@@ -1,0 +1,67 @@
+"use strict";
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const React = __importStar(require("react"));
+const CallManager_1 = require("./CallManager");
+const Calling_1 = require("../types/Calling");
+// @ts-ignore
+const i18n_1 = require("../../js/modules/i18n");
+// @ts-ignore
+const messages_json_1 = __importDefault(require("../../_locales/en/messages.json"));
+const react_1 = require("@storybook/react");
+const addon_actions_1 = require("@storybook/addon-actions");
+const i18n = i18n_1.setup('en', messages_json_1.default);
+const callDetails = {
+    callId: 0,
+    isIncoming: true,
+    isVideoCall: true,
+    avatarPath: undefined,
+    color: 'ultramarine',
+    title: 'Rick Sanchez',
+    name: 'Rick Sanchez',
+    phoneNumber: '3051234567',
+    profileName: 'Rick Sanchez',
+};
+const defaultProps = {
+    acceptCall: addon_actions_1.action('accept-call'),
+    callDetails,
+    callState: Calling_1.CallState.Accepted,
+    declineCall: addon_actions_1.action('decline-call'),
+    getVideoCapturer: () => ({}),
+    getVideoRenderer: () => ({}),
+    hangUp: addon_actions_1.action('hang-up'),
+    hasLocalAudio: true,
+    hasLocalVideo: true,
+    hasRemoteVideo: true,
+    i18n,
+    setLocalAudio: addon_actions_1.action('set-local-audio'),
+    setLocalVideo: addon_actions_1.action('set-local-video'),
+    setVideoCapturer: addon_actions_1.action('set-video-capturer'),
+    setVideoRenderer: addon_actions_1.action('set-video-renderer'),
+};
+const permutations = [
+    {
+        title: 'Call Manager (ongoing)',
+        props: {},
+    },
+    {
+        title: 'Call Manager (ringing)',
+        props: {
+            callState: Calling_1.CallState.Ringing,
+        },
+    },
+];
+react_1.storiesOf('Components/CallManager', module).add('Iterations', () => {
+    return permutations.map(({ props, title }) => (React.createElement(React.Fragment, null,
+        React.createElement("h3", null, title),
+        React.createElement(CallManager_1.CallManager, Object.assign({}, defaultProps, props)))));
+});

@@ -1686,6 +1686,8 @@
     addQueuedEventListener('group', onGroupReceived);
     addQueuedEventListener('sent', onSentMessage);
     addQueuedEventListener('readSync', onReadSync);
+    addQueuedEventListener('deleteSync', onDeleteSync);
+    addQueuedEventListener('clearChatSync', onClearChatSync);
     addQueuedEventListener('read', onReadReceipt);
     addQueuedEventListener('verified', onVerified);
     addQueuedEventListener('error', onError);
@@ -1873,7 +1875,7 @@
     ]);
     window.log.info('onEmpty: All outstanding database requests complete');
     initialLoadComplete = true;
-
+    window.log.info("my update check 2")
     window.readyForUpdates();
 
     // Start listeners here, after we get through our queue.
@@ -1995,6 +1997,14 @@
         );
         return;
       }
+
+      if (!conversation.isPrivate() && !conversation.hasMember(senderId)) {
+        window.log.warn(
+          `Received typing indicator for group ${conversation.idForLogging()}, which sender is not a part of. Dropping.`
+        );
+        return;
+      }
+      
 
       conversation.notifyTyping({
         isTyping: started,
@@ -2885,6 +2895,77 @@
     return Whisper.ReadSyncs.onReceipt(receipt);
   }
 
+
+  function onDeleteSync(ev) {
+    // const readAt = ev.timestamp;
+    const { envelopeTimestamp, senderE164, senderUuid, timestamp, groupId } = ev.delete;
+    const senderId = ConversationController.ensureContactIds({
+      e164: senderE164,
+      uuid: senderUuid,
+    });
+
+    window.log.info(
+      'delete sync',
+      senderE164,
+      senderUuid,
+      envelopeTimestamp,
+      senderId,
+      'for message',
+      timestamp
+    );
+
+    const receipt = Whisper.DeleteSyncs.add({
+      senderId,
+      senderE164,
+      senderUuid,
+      timestamp,
+      groupId
+      // read_at: readAt,
+    });
+
+    receipt.on('remove', ev.confirm);
+
+    // Note: Here we wait, because we want read states to be in the database
+    //   before we move on.
+    return Whisper.DeleteSyncs.onDeleteForMeSync(receipt);
+  }
+
+  
+  function onClearChatSync(ev) {
+    // const readAt = ev.timestamp;
+    const { envelopeTimestamp, senderE164, senderUuid, groupId } = ev.delete;
+    const senderId = ConversationController.ensureContactIds({
+      e164: senderE164,
+      uuid: senderUuid,
+    });
+
+    window.log.info(
+      'clearChat sync',
+      senderE164,
+      senderUuid,
+      envelopeTimestamp,
+      senderId,
+      'for message',
+      // timestamp
+    );
+
+    const receipt = Whisper.ClearChatSync.add({
+      senderId,
+      senderE164,
+      senderUuid,
+      groupId
+      // timestamp,
+      // read_at: readAt,
+    });
+
+    receipt.on('remove', ev.confirm);
+
+    // Note: Here we wait, because we want read states to be in the database
+    //   before we move on.
+    return Whisper.ClearChatSync.onClearChatSync(receipt);
+  }
+
+  
   async function onVerified(ev) {
     const e164 = ev.verified.destination;
     const uuid = ev.verified.destinationUuid;

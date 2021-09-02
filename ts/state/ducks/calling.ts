@@ -1,6 +1,6 @@
 import { notify } from '../../services/notify';
 import { calling, VideoCapturer, VideoRenderer } from '../../services/calling';
-import { CallState } from '../../types/Calling';
+import { CallState,  ChangeIODevicePayloadType,  MediaDeviceSettings,CallingDeviceType } from '../../types/Calling';
 import { CanvasVideoRenderer, GumVideoCapturer } from '../../window.d';
 import { ColorType } from '../../types/Colors';
 import { NoopActionType } from './noop';
@@ -10,6 +10,8 @@ import {
   bounceAppIconStart,
   bounceAppIconStop,
 } from '../../shims/bounceAppIcon';
+// import { ThunkAction } from 'redux-thunk';
+// import { StateType as RootStateType } from '../reducer';
 
 // State
 
@@ -26,9 +28,9 @@ export type CallDetailsType = {
   phoneNumber?: string;
   profileName?: string;
   title: string;
-};
+}; 
 
-export type CallingStateType = {
+export type CallingStateType = MediaDeviceSettings & {
   callDetails?: CallDetailsType;
   callState?: CallState;
   hasLocalAudio: boolean;
@@ -99,6 +101,8 @@ const REMOTE_VIDEO_CHANGE = 'calling/REMOTE_VIDEO_CHANGE';
 const SET_LOCAL_AUDIO = 'calling/SET_LOCAL_AUDIO';
 const SET_LOCAL_VIDEO = 'calling/SET_LOCAL_VIDEO';
 const SET_LOCAL_VIDEO_FULFILLED = 'calling/SET_LOCAL_VIDEO_FULFILLED';
+const CHANGE_IO_DEVICE_FULFILLED = 'calling/CHANGE_IO_DEVICE_FULFILLED';
+const REFRESH_IO_DEVICES = 'calling/REFRESH_IO_DEVICES';
 
 type AcceptCallActionType = {
   type: 'calling/ACCEPT_CALL';
@@ -155,7 +159,19 @@ type SetLocalVideoFulfilledActionType = {
   payload: SetLocalVideoType;
 };
 
+type ChangeIODeviceFulfilledActionType = {
+  type: 'calling/CHANGE_IO_DEVICE_FULFILLED';
+  payload: ChangeIODevicePayloadType;
+};
+
+type RefreshIODevicesActionType = {
+  type: 'calling/REFRESH_IO_DEVICES';
+  payload: MediaDeviceSettings;
+};
+
 export type CallingActionType =
+| ChangeIODeviceFulfilledActionType
+| RefreshIODevicesActionType
   | AcceptCallActionType
   | CallStateChangeActionType
   | CallStateChangeFulfilledActionType
@@ -197,23 +213,32 @@ function callStateChange(
   };
 }
 
+function refreshIODevices(
+  payload: MediaDeviceSettings
+): RefreshIODevicesActionType {
+  return {
+    type: REFRESH_IO_DEVICES,
+    payload,
+  };
+}
+
 async function doCallStateChange(
   payload: CallStateChangeType
 ): Promise<CallStateChangeType> {
   const { callDetails, callState } = payload;
   const { isIncoming } = callDetails;
   if (callState === CallState.Ringing && isIncoming) {
-    await callingTones.playRingtone();
+    if(window.localStorage.getItem('loading')=='false') await callingTones.playRingtone();
     await showCallNotification(callDetails);
     bounceAppIconStart();
   }
   if (callState !== CallState.Ringing) {
-    callingTones.stopRingtone();
+    if(window.localStorage.getItem('loading')=='false') callingTones.stopRingtone();
     bounceAppIconStop();
   }
   if (callState === CallState.Ended) {
     // tslint:disable-next-line no-floating-promises
-    callingTones.playEndCall();
+    if(window.localStorage.getItem('loading')=='false') callingTones.playEndCall();
   }
   return payload;
 }
@@ -267,7 +292,7 @@ function hangUp(payload: HangUpType): HangUpActionType {
 }
 
 function incomingCall(payload: IncomingCallType): IncomingCallActionType {
-  callingTones.playRingtone();
+  // callingTones.playRingtone();
   return {
     type: INCOMING_CALL,
     payload,
@@ -341,7 +366,32 @@ async function doSetLocalVideo(
   };
 }
 
+
+
+async function changeIODevice(
+  payload: ChangeIODevicePayloadType
+)
+ {
+  // return async dispatch => {
+    // Only `setPreferredCamera` returns a Promise.
+    if (payload.type === CallingDeviceType.CAMERA) {
+      await calling.setPreferredCamera(payload.selectedDevice);
+    } else if (payload.type === CallingDeviceType.MICROPHONE) {
+      calling.setPreferredMicrophone(payload.selectedDevice);
+    } else if (payload.type === CallingDeviceType.SPEAKER) {
+      calling.setPreferredSpeaker(payload.selectedDevice);
+    }
+    return({
+      type: CHANGE_IO_DEVICE_FULFILLED,
+      payload,
+    });
+  // };
+}
+
+
 export const actions = {
+  changeIODevice,
+  refreshIODevices,
   acceptCall,
   callStateChange,
   declineCall,
@@ -361,6 +411,14 @@ export type ActionsType = typeof actions;
 
 function getEmptyState(): CallingStateType {
   return {
+
+    availableCameras: [],
+    availableMicrophones: [],
+    availableSpeakers: [],
+    selectedCamera: undefined,
+    selectedMicrophone: undefined,
+    selectedSpeaker: undefined,
+    
     callDetails: undefined,
     callState: undefined,
     hasLocalAudio: false,
@@ -404,6 +462,47 @@ export function reducer(
       hasLocalVideo: action.payload.callDetails.isVideoCall,
     };
   }
+
+  if (action.type === CHANGE_IO_DEVICE_FULFILLED) {
+    const { selectedDevice } = action.payload;
+    const nextState = Object.create(null);
+
+    if (action.payload.type === CallingDeviceType.CAMERA) {
+      nextState.selectedCamera = selectedDevice;
+    } else if (action.payload.type === CallingDeviceType.MICROPHONE) {
+      nextState.selectedMicrophone = selectedDevice;
+    } else if (action.payload.type === CallingDeviceType.SPEAKER) {
+      nextState.selectedSpeaker = selectedDevice;
+    }
+
+    return {
+      ...state,
+      ...nextState,
+    };
+  }
+
+
+  if (action.type === REFRESH_IO_DEVICES) {
+    const {
+      availableMicrophones,
+      selectedMicrophone,
+      availableSpeakers,
+      selectedSpeaker,
+      availableCameras,
+      selectedCamera,
+    } = action.payload;
+
+    return {
+      ...state,
+      availableMicrophones,
+      selectedMicrophone,
+      availableSpeakers,
+      selectedSpeaker,
+      availableCameras,
+      selectedCamera,
+    };
+  }
+
 
   if (action.type === CALL_STATE_CHANGE_FULFILLED) {
     if (action.payload.callState === CallState.Ended) {

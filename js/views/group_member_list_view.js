@@ -14,12 +14,14 @@
       this.needVerify = options.needVerify;
 
       this.render();
-
+      window.log.info("model while removing 2",options)
       this.member_list_view = new Whisper.ContactListView({
+        
         collection: this.model,
         className: 'members',
         toInclude: {
           listenBack: options.listenBack,
+          groupModel:options.groupModel,
         },
       });
       this.member_list_view.render();

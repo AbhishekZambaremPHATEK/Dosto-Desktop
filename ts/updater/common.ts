@@ -1,7 +1,7 @@
 import {
   createWriteStream,
   statSync,
-  writeFile as writeFileCallback,
+  // writeFile as writeFileCallback,
 } from 'fs';
 import { join, normalize } from 'path';
 import { tmpdir } from 'os';
@@ -13,7 +13,9 @@ import ProxyAgent from 'proxy-agent';
 import { FAILSAFE_SCHEMA, safeLoad } from 'js-yaml';
 import { gt } from 'semver';
 import { get as getFromConfig } from 'config';
-import { get, GotOptions, stream } from 'got';
+import { get,
+  //  GotOptions,
+    stream } from 'got';
 import { v4 as getGuid } from 'uuid';
 import pify from 'pify';
 import mkdirp from 'mkdirp';
@@ -25,12 +27,12 @@ import { Dialogs } from '../types/Dialogs';
 
 // @ts-ignore
 import * as packageJson from '../../package.json';
-import { getSignatureFileName } from './signature';
+// import { getSignatureFileName } from './signature';
 
 import { LocaleType } from '../types/I18N';
 import { LoggerType } from '../types/Logging';
 
-const writeFile = pify(writeFileCallback);
+// const writeFile = pify(writeFileCallback);
 const mkdirpPromise = pify(mkdirp);
 const rimrafPromise = pify(rimraf);
 const { platform } = process;
@@ -40,11 +42,21 @@ export const ACK_RENDER_TIMEOUT = 10000;
 export async function checkForUpdates(
   logger: LoggerType
 ): Promise<{
-  fileName: string;
+  // fileName: string;
   version: string;
 } | null> {
-  const yaml = await getUpdateYaml();
-  const version = getVersion(yaml);
+  logger.info(`my checkForUpdates: found newer version 1`);
+  let a=await get("https://dosto.live/desktop/desktop-version.json"); 
+  const yaml= a.body.toString();
+  // const yaml = await getUpdateYaml();
+
+  logger.info(`my checkForUpdates: found newer version ${yaml}`);
+  const info = parseYaml(yaml);
+  logger.info(`my checkForUpdates: found newer version ${info}`);
+  logger.info(`my checkForUpdates: found newer version ${info.versionName}`);
+  
+
+  const version = info.versionName;
 
   if (!version) {
     logger.warn('checkForUpdates: no version extracted from downloaded yaml');
@@ -56,7 +68,7 @@ export async function checkForUpdates(
     logger.info(`checkForUpdates: found newer version ${version}`);
 
     return {
-      fileName: getUpdateFileName(yaml),
+      // fileName: getUpdateFileName(yaml),
       version,
     };
   }
@@ -79,33 +91,35 @@ export function validatePath(basePath: string, targetPath: string) {
 }
 
 export async function downloadUpdate(
-  fileName: string,
+  // fileName: string,
   logger: LoggerType
 ): Promise<string> {
-  const baseUrl = getUpdatesBase();
-  const updateFileUrl = `${baseUrl}/${fileName}`;
+  // const baseUrl = getUpdatesBase();
+  // const updateFileUrl = `${baseUrl}/${fileName}`;
 
-  const signatureFileName = getSignatureFileName(fileName);
-  const signatureUrl = `${baseUrl}/${signatureFileName}`;
+  const updateFileUrl = "https://dosto.live/desktop/dosto.exe"
+
+  // const signatureFileName = getSignatureFileName(fileName);
+  // const signatureUrl = `${baseUrl}/${signatureFileName}`;
 
   let tempDir;
   try {
     tempDir = await createTempDir();
-    const targetUpdatePath = join(tempDir, fileName);
-    const targetSignaturePath = join(tempDir, getSignatureFileName(fileName));
+    const targetUpdatePath = join(tempDir, "dosto.exe");
+    // const targetSignaturePath = join(tempDir, getSignatureFileName(fileName));
 
     validatePath(tempDir, targetUpdatePath);
-    validatePath(tempDir, targetSignaturePath);
+    // validatePath(tempDir, targetSignaturePath);
 
-    logger.info(`downloadUpdate: Downloading ${signatureUrl}`);
-    const { body } = await get(signatureUrl, getGotOptions());
-    await writeFile(targetSignaturePath, body);
+    // logger.info(`downloadUpdate: Downloading ${signatureUrl}`);
+    // const { body } = await get(signatureUrl, getGotOptions());
+    // await writeFile(targetSignaturePath, body);
 
     logger.info(`downloadUpdate: Downloading ${updateFileUrl}`);
-    const downloadStream = stream(updateFileUrl, getGotOptions());
+    const downloadStream = stream(updateFileUrl);
     const writeStream = createWriteStream(targetUpdatePath);
 
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       downloadStream.on('error', error => {
         reject(error);
       });
@@ -302,32 +316,34 @@ function parseYaml(yaml: string): any {
   return safeLoad(yaml, { schema: FAILSAFE_SCHEMA, json: true });
 }
 
-async function getUpdateYaml(): Promise<string> {
-  const targetUrl = getUpdateCheckUrl();
-  const { body } = await get(targetUrl, getGotOptions());
+// async function getUpdateYaml(): Promise<string> {
+//   // const targetUrl = getUpdateCheckUrl();
+//   const a=await get("https://dosto.live/sirenJsonFile.json", getGotOptions()); 
+//   return a.toString();
+//   // const { body } = await get(targetUrl, getGotOptions());
 
-  if (!body) {
-    throw new Error('Got unexpected response back from update check');
-  }
+//   // if (!body) {
+//   //   throw new Error('Got unexpected response back from update check');
+//   // }
 
-  return body.toString('utf8');
-}
+//   // return body.toString('utf8');
+// }
 
-function getGotOptions(): GotOptions<null> {
-  const ca = getCertificateAuthority();
-  const proxyUrl = getProxyUrl();
-  const agent = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
+// function getGotOptions(): GotOptions<null> {
+//   const ca = getCertificateAuthority();
+//   const proxyUrl = getProxyUrl();
+//   const agent = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
 
-  return {
-    agent,
-    ca,
-    headers: {
-      'Cache-Control': 'no-cache',
-      'User-Agent': `Dosto Desktop ${packageJson.version}`,
-    },
-    useElectronNet: false,
-  };
-}
+//   return {
+//     agent,
+//     ca,
+//     headers: {
+//       'Cache-Control': 'no-cache',
+//       'User-Agent': `Dosto Desktop ${packageJson.version}`,
+//     },
+//     useElectronNet: false,
+//   };
+// }
 
 function getBaseTempDir() {
   // We only use tmpdir() when this code is run outside of an Electron app (as in: tests)

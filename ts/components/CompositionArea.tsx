@@ -41,6 +41,8 @@ export type OwnProps = {
   readonly attCellEl?: HTMLElement;
   readonly attachmentListEl?: HTMLElement;
   onChooseAttachment(): unknown;
+  readonly myconversation:any;
+  onScrollToMessage:any
 };
 
 export type Props = Pick<
@@ -82,6 +84,8 @@ const emptyElement = (el: HTMLElement) => {
 
 // tslint:disable-next-line max-func-body-length cyclomatic-complexity
 export const CompositionArea = ({
+  myconversation,
+  onScrollToMessage,
   i18n,
   attachmentListEl,
   micCellEl,
@@ -143,9 +147,17 @@ export const CompositionArea = ({
     }
   }, [inputApiRef, setLarge]);
 
-  const handleSubmit = React.useCallback<typeof onSubmit>(
-    (...args) => {
+   const handleSubmit = React.useCallback<typeof onSubmit>(
+    async (...args) => {
       setLarge(false);
+      let messages = await window.Signal.Data.getOlderMessagesByConversation(myconversation.id,{
+        // receivedAt:0,
+        limit: 1,
+        MessageCollection: window.Whisper.MessageCollection,
+      })
+      
+      if(messages.models[0]) await onScrollToMessage(messages.models[0].attributes.id)
+      window.log.info("myconversation while send message",messages)
       onSubmit(...args);
     },
     [setLarge, onSubmit]
@@ -389,8 +401,9 @@ export const CompositionArea = ({
         </div>
         {!large ? (
           <>
-            {stickerButtonFragment}
             {!dirty ? micButtonFragment : null}
+            {dirty || !showMic ? sendButtonFragment : null}
+            {stickerButtonFragment}
             {attButton}
           </>
         ) : null}

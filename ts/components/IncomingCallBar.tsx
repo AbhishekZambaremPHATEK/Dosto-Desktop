@@ -8,6 +8,7 @@ import {
   CallDetailsType,
   DeclineCallType,
 } from '../state/ducks/calling';
+// import { callingTones } from '../util/callingTones';
 
 export type PropsType = {
   acceptCall: (_: AcceptCallType) => void;
@@ -59,6 +60,13 @@ export const IncomingCallBar = ({
     return null;
   }
 
+  // useEffect(() => {
+  //   callingTones.playRingtone();
+  //   return () => {
+  //     callingTones.stopRingtone();
+  //   };
+  // }, []);
+  
   const {
     avatarPath,
     callId,

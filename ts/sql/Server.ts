@@ -124,6 +124,7 @@ const dataInterface: ServerInterface = {
   _getAllMessages,
   getAllMessageIds,
   getMessagesBySentAt,
+  getMessagesByconversationId,
   getExpiredMessages,
   getOutgoingWithoutExpiresAt,
   getNextExpiringMessage,
@@ -2882,6 +2883,20 @@ async function getMessagesBySentAt(sentAt: number) {
      ORDER BY received_at DESC;`,
     {
       $sent_at: sentAt,
+    }
+  );
+
+  return map(rows, row => jsonToObject(row.json));
+}
+
+async function getMessagesByconversationId(conversationId: string) {
+  const db = getInstance();
+  const rows = await db.all(
+    `SELECT * FROM messages
+     WHERE conversationId = $conversationId
+     ORDER BY received_at DESC;`,
+    {
+      $conversationId: conversationId,
     }
   );
 

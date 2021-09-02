@@ -1,0 +1,104 @@
+"use strict";
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const React = __importStar(require("react"));
+const Calling_1 = require("../types/Calling");
+const CallScreen_1 = require("./CallScreen");
+// @ts-ignore
+const i18n_1 = require("../../js/modules/i18n");
+// @ts-ignore
+const messages_json_1 = __importDefault(require("../../_locales/en/messages.json"));
+const react_1 = require("@storybook/react");
+const addon_knobs_1 = require("@storybook/addon-knobs");
+const addon_actions_1 = require("@storybook/addon-actions");
+const i18n = i18n_1.setup('en', messages_json_1.default);
+const callDetails = {
+    callId: 0,
+    isIncoming: true,
+    isVideoCall: true,
+    avatarPath: undefined,
+    color: 'ultramarine',
+    title: 'Rick Sanchez',
+    name: 'Rick Sanchez',
+    phoneNumber: '3051234567',
+    profileName: 'Rick Sanchez',
+};
+const defaultProps = {
+    callDetails,
+    callState: Calling_1.CallState.Accepted,
+    getVideoCapturer: () => ({}),
+    getVideoRenderer: () => ({}),
+    hangUp: addon_actions_1.action('hang-up'),
+    hasLocalAudio: true,
+    hasLocalVideo: true,
+    hasRemoteVideo: true,
+    i18n,
+    setLocalAudio: addon_actions_1.action('set-local-audio'),
+    setLocalVideo: addon_actions_1.action('set-local-video'),
+    setVideoCapturer: addon_actions_1.action('set-video-capturer'),
+    setVideoRenderer: addon_actions_1.action('set-video-renderer'),
+};
+const permutations = [
+    {
+        title: 'Call Screen',
+        props: {},
+    },
+    {
+        title: 'Call Screen (Pre-ring)',
+        props: {
+            callState: Calling_1.CallState.Prering,
+        },
+    },
+    {
+        title: 'Call Screen (Ringing)',
+        props: {
+            callState: Calling_1.CallState.Ringing,
+        },
+    },
+    {
+        title: 'Call Screen (Reconnecting)',
+        props: {
+            callState: Calling_1.CallState.Reconnecting,
+        },
+    },
+    {
+        title: 'Call Screen (Ended)',
+        props: {
+            callState: Calling_1.CallState.Ended,
+        },
+    },
+    {
+        title: 'Calling (no local audio)',
+        props: Object.assign(Object.assign({}, defaultProps), { hasLocalAudio: false }),
+    },
+    {
+        title: 'Calling (no local video)',
+        props: Object.assign(Object.assign({}, defaultProps), { hasLocalVideo: false }),
+    },
+    {
+        title: 'Calling (no remote video)',
+        props: Object.assign(Object.assign({}, defaultProps), { hasRemoteVideo: false }),
+    },
+];
+react_1.storiesOf('Components/CallScreen', module)
+    .add('Knobs Playground', () => {
+    const callState = addon_knobs_1.select('callState', Calling_1.CallState, Calling_1.CallState.Accepted);
+    const hasLocalAudio = addon_knobs_1.boolean('hasLocalAudio', true);
+    const hasLocalVideo = addon_knobs_1.boolean('hasLocalVideo', true);
+    const hasRemoteVideo = addon_knobs_1.boolean('hasRemoteVideo', true);
+    return (React.createElement(CallScreen_1.CallScreen, Object.assign({}, defaultProps, { callState: callState, hasLocalAudio: hasLocalAudio, hasLocalVideo: hasLocalVideo, hasRemoteVideo: hasRemoteVideo })));
+})
+    .add('Iterations', () => {
+    return permutations.map(({ props, title }) => (React.createElement(React.Fragment, null,
+        React.createElement("h3", null, title),
+        React.createElement(CallScreen_1.CallScreen, Object.assign({}, defaultProps, props)))));
+});

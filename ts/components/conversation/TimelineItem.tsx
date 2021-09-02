@@ -25,7 +25,7 @@ import {
 import {
   PropsActions as SafetyNumberActionsType,
   PropsData as SafetyNumberNotificationProps,
-  SafetyNumberNotification,
+  // SafetyNumberNotification,
 } from './SafetyNumberNotification';
 import {
   PropsData as VerificationNotificationProps,
@@ -154,8 +154,11 @@ export class TimelineItem extends React.PureComponent<PropsType> {
         <TimerNotification {...this.props} {...item.data} i18n={i18n} />
       );
     } else if (item.type === 'safetyNumberNotification') {
+      // notification = (
+      //   <SafetyNumberNotification {...this.props} {...item.data} i18n={i18n} />
+      // );
       notification = (
-        <SafetyNumberNotification {...this.props} {...item.data} i18n={i18n} />
+        <></>
       );
     } else if (item.type === 'verificationNotification') {
       notification = (

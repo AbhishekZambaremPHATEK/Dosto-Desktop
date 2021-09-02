@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState } from 'react';
 import { CallScreen, PropsType as CallScreenPropsType } from './CallScreen';
 import {
   IncomingCallBar,
@@ -6,10 +7,13 @@ import {
 } from './IncomingCallBar';
 import { CallState } from '../types/Calling';
 import { CallDetailsType } from '../state/ducks/calling';
+import { SmartCallingDeviceSelection } from '../state/smart/CallingDeviceSelection';
+
 
 type CallManagerPropsType = {
   callDetails?: CallDetailsType;
   callState?: CallState;
+  renderDeviceSelection: () => JSX.Element;
 };
 type PropsType = IncomingCallBarPropsType &
   CallScreenPropsType &
@@ -31,7 +35,11 @@ export const CallManager = ({
   setLocalVideo,
   setVideoCapturer,
   setVideoRenderer,
+  // renderDeviceSelection
 }: PropsType): JSX.Element | null => {
+
+  const [settingsDialogOpen, setsettingsDialogOpen] = useState(false);
+
   if (!callDetails || !callState) {
     return null;
   }
@@ -42,7 +50,8 @@ export const CallManager = ({
   const ringing = callState === CallState.Ringing;
 
   if (outgoing || ongoing) {
-    return (
+    return ( 
+      <>
       <CallScreen
         callDetails={callDetails}
         callState={callState}
@@ -57,7 +66,11 @@ export const CallManager = ({
         setVideoRenderer={setVideoRenderer}
         setLocalAudio={setLocalAudio}
         setLocalVideo={setLocalVideo}
+        toggleSettings={()=>setsettingsDialogOpen(true)}
       />
+      {/* {settingsDialogOpen && renderDeviceSelection()} */}
+      {settingsDialogOpen && <SmartCallingDeviceSelection toggleSettings={()=>setsettingsDialogOpen(!settingsDialogOpen)}/>}
+      </>
     );
   }
 

@@ -19,14 +19,14 @@
   'use strict';
 
   window.Whisper = window.Whisper || {};
-
+  // const ourProfileKeyService =require('./ourProfileKeyService');
   const SEALED_SENDER = {
     UNKNOWN: 0,
     ENABLED: 1,
     DISABLED: 2,
     UNRESTRICTED: 3,
   };
-
+  const THREE_HOURS = 3 * 60 * 60 * 1000;
   const { Util } = window.Signal;
   const { Contact, Message } = window.Signal.Types;
   const {
@@ -1131,7 +1131,40 @@
         });
       }
     },
+async onDeleteForMeMessage(message){
+  window.Signal.Data.removeMessage(message.id, {
+    Message: Whisper.Message,
+  });
+  message.trigger('unload');
+  this.model.messageCollection.remove(message.id);
+  if (message.isOutgoing()) {
+    this.model.decrementSentMessageCount();
+  } else {
+    this.model.decrementMessageCount();
+  }
+},
 
+async onClearChatForMeMessage(){
+  this.messageCollection.reset([]);
+
+  this.set({
+    lastMessage: null,
+    timestamp: null,
+    // active_at: null,
+    lastMessageStatus: null,
+  });
+  window.Signal.Data.updateConversation(this.attributes);
+  
+  // const deleteModel = window.Whisper.Deletes.add({
+  //   targetSentTimestamp: null,
+  //   fromId: window.ConversationController.getOurConversationId(),
+  // });
+ 
+  await window.Signal.Data.removeAllMessagesInConversation(this.id, {
+    MessageCollection: Whisper.MessageCollection,
+  });
+  // window.Whisper.Deletes.onDelete(deleteModel);
+},
     async onReadMessage(message, readAt) {
       // We mark as read everything older than this message - to clean up old stuff
       //   still marked unread in the database. If the user generally doesn't read in
@@ -1453,6 +1486,7 @@
             null,
             null,
             outgoingReaction,
+            undefined,
             timestamp,
             expireTimer,
             profileKey
@@ -1472,6 +1506,7 @@
               null,
               null,
               outgoingReaction,
+              undefined,
               timestamp,
               expireTimer,
               profileKey,
@@ -1491,6 +1526,7 @@
             timestamp,
             expireTimer,
             profileKey,
+            undefined,
             options
           );
         })();
@@ -1542,14 +1578,21 @@
       const expireTimer = this.get('expireTimer');
       const recipients = this.getRecipients();
 
-      let profileKey;
-      if (this.get('profileSharing')) {
-        profileKey = storage.get('profileKey');
-      }
+
 
       this.queueJob(async () => {
-        const now = Date.now();
+        // const a=await this.getProfile(this.get('uuid'))
+        // window.log.info("printing all profileKey",this.get('uuid'),this.get('e164'),a)
+  
+        await this.getProfiles();
 
+        let profileKey;
+        profileKey =  this.get('profileKey')
+        // if (this.get('profileSharing')) {
+        //   // profileKey = storage.get('profileKey');
+        // }
+        const now = Date.now();
+  
         window.log.info(
           'Sending message to conversation',
           this.idForLogging(),
@@ -1640,6 +1683,7 @@
             preview,
             sticker,
             null,
+            undefined,
             now,
             expireTimer,
             profileKey
@@ -1648,7 +1692,7 @@
         }
 
         const conversationType = this.get('type');
-        const options = this.getSendOptions();
+        const options = await this.getSendOptions();
 
         const promise = (() => {
           switch (conversationType) {
@@ -1661,6 +1705,7 @@
                 preview,
                 sticker,
                 null,
+                undefined,
                 now,
                 expireTimer,
                 profileKey,
@@ -1679,6 +1724,7 @@
                 now,
                 expireTimer,
                 profileKey,
+                undefined,
                 options
               );
             default:
@@ -1691,6 +1737,150 @@
         return message.send(this.wrapSend(promise));
       });
     },
+
+
+
+     async sendDeleteForMeMessage(sendAt) {
+
+      const conversationId = this.id;
+      Whisper.Notifications.remove(
+        Whisper.Notifications.where({
+          conversationId,
+        })
+      );
+      // let messages = await window.Signal.Data.getMessagesBySentAt(sendAt,{
+      //   MessageCollection: Whisper.MessageCollection,
+      // })
+
+      // const receiptSpecs = messages.map(m => ({
+      //   senderE164: m.get('source'),
+      //   senderUuid: m.get('sourceUuid'),
+      //   senderId: ConversationController.ensureContactIds({
+      //     e164: m.get('source'),
+      //     uuid: m.get('sourceUuid'),
+      //   }),
+      //   timestamp: m.get('sent_at'),
+      //   hasErrors: m.hasErrors(),
+      // }));
+      let Delete = 
+           [
+             {
+            senderE164: this.get('e164'),
+            senderUuid: this.get('uuid'),
+            // senderId: this.isPrivate() ? ConversationController.ensureContactIds({
+            //   e164: this.get('e164'),
+            //   uuid: this.get('uuid'),
+            // }) : this.get('groupId'),
+            groupId: this.isPrivate() ? null :  this.get('groupId'),
+            timestamp: sendAt,
+            hasErrors: false,
+          }
+        ];
+
+      window.log.info(`Sending Delete syncs before`,this);
+
+      if (Delete.length) {
+        window.log.info(`Sending ${Delete.length} Delete syncs`);
+      
+        const {
+          sendOptions,
+        } = ConversationController.prepareForSend(
+          ConversationController.getOurConversationId(),
+          { syncMessage: true }
+        );
+        await this.wrapSend(
+          textsecure.messaging.syncDeleteMessages(Delete,sendOptions)
+        );
+      }
+    },
+
+    async sendDeleteForEveryoneMessage(targetTimestamp) {
+      const timestamp = Date.now();
+      if (timestamp - targetTimestamp > THREE_HOURS) {
+          throw new Error('Cannot send DOE for a message older than three hours');
+      }
+      const deleteModel = window.Whisper.Deletes.add({
+          targetSentTimestamp: targetTimestamp,
+          fromId: window.ConversationController.getOurConversationId(),
+      });
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const destination = this.getSendTarget();
+      const recipients = this.getRecipients();
+      return this.queueJob(async () => {
+          window.log.info('Sending deleteForEveryone to conversation', this.idForLogging(), 'with timestamp', timestamp);
+          this.incrementMessageCount()
+          const attributes = {
+              id: window.getGuid(),
+              type: 'outgoing',
+              conversationId: this.get('id'),
+              sent_at: timestamp,
+              received_at: timestamp,
+              received_at_ms: timestamp,
+              recipients,
+              deletedForEveryoneTimestamp: targetTimestamp,
+          };
+          if (this.isPrivate()) {
+              attributes.destination = destination;
+          }
+          // We are only creating this model so we can use its sync message
+          // sending functionality. It will not be saved to the database.
+          const message = new window.Whisper.Message(attributes);
+          // We're offline!
+          if (!window.textsecure.messaging) {
+              throw new Error('Cannot send DOE while offline!');
+          }
+          const options = await this.getSendOptions();
+          const promise = (async () => {
+            let profileKey;
+            if (this.get('profileSharing')) {
+              profileKey = await storage.get('profileKey');
+            }
+              if (this.isPrivate()) {
+                  return window.textsecure.messaging.sendMessageToIdentifier(destination, undefined, // body
+                  [], // attachments
+                  undefined, // quote
+                  [], // preview
+                  undefined, // sticker
+                  undefined, // reaction
+                  targetTimestamp,
+                 timestamp, undefined, // expireTimer
+                  profileKey, options);
+              }
+    
+
+
+              return window.textsecure.messaging.sendMessageToGroup(
+                  this.get('groupId'),
+                  this.getRecipients(),
+                  null,
+                  [],
+                  null,
+                  null,
+                  null,
+                  null,
+                  timestamp,
+                  undefined,
+                  profileKey,
+                  targetTimestamp,
+                  options
+              );
+          })();
+          // This is to ensure that the functions in send() and sendSyncMessage() don't save
+          //   anything to the database.
+          message.doNotSave = true;
+          const result = await message.send(this.wrapSend(promise));
+          if (!message.hasSuccessfulDelivery()) {
+              // This is handled by `conversation_view` which displays a toast on
+              // send error.
+              throw new Error('No successful delivery for delete for everyone');
+          }
+          window.Whisper.Deletes.onDelete(deleteModel);
+          return result;
+      }).catch(error => {
+          window.log.error('Error sending deleteForEveryone', deleteModel, targetTimestamp, error);
+          throw error;
+      });
+  },
 
     wrapSend(promise) {
       return promise.then(
@@ -2074,6 +2264,7 @@
           [],
           null,
           null,
+          undefined,
           message.get('sent_at'),
           expireTimer,
           profileKey,
@@ -2150,6 +2341,42 @@
     isSearchable() {
       return !this.get('left');
     },
+
+    // async endSession() {
+    //   if (isDirectConversation(this.attributes)) {
+    //     const now = Date.now();
+    //     const model = new window.Whisper.Message({
+    //       conversationId: this.id,
+    //       type: 'outgoing',
+    //       sent_at: now,
+    //       received_at: window.Signal.Util.incrementMessageCounter(),
+    //       received_at_ms: now,
+    //       destination: this.get('e164'),
+    //       destinationUuid: this.get('uuid'),
+    //       recipients: this.getRecipients(),
+    //       flags: Proto.DataMessage.Flags.END_SESSION,
+    //       // TODO: DESKTOP-722
+    //     });
+  
+    //     const id = await window.Signal.Data.saveMessage(model.attributes);
+    //     model.set({ id });
+  
+    //     const message = window.MessageController.register(model.id, model);
+    //     this.addSingleMessage(message);
+  
+    //     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    //     const uuid = this.get('uuid');
+    //     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    //     const e164 = this.get('e164');
+  
+    //     message.sendUtilityMessageWithRetry({
+    //       type: 'session-reset',
+    //       uuid,
+    //       e164,
+    //       now,
+    //     });
+    //   }
+    // }
 
     async endSession() {
       if (this.isPrivate()) {
@@ -2230,6 +2457,7 @@
 
     async leaveGroup() {
       const now = Date.now();
+      window.log.info("my leve group",this)
       if (this.get('type') === 'group') {
         const groupIdentifiers = this.getRecipients();
         this.set({ left: true });
@@ -2255,6 +2483,84 @@
         message.send(
           this.wrapSend(
             textsecure.messaging.leaveGroup(this.id, groupIdentifiers, options)
+          )
+        );
+      }
+    },
+
+    async removeMember(groupModel) {
+      window.log.info("my removemember group",groupModel.get('id'),groupModel.get('groupId'))
+      const now = Date.now();
+      if (groupModel.get('type') === 'group') {
+        const groupIdentifiers = groupModel.getRecipients();
+        // this.set({ left: true });
+        groupModel.set({ group_update: {memberRemove: this.get('id')} });
+        window.Signal.Data.updateConversation(groupModel.attributes);
+
+        const model = new Whisper.Message({
+          group_update: { memberRemove:this.get('id')},
+          conversationId: groupModel.get('id'),
+          type: 'outgoing',
+          sent_at: now,
+          received_at: now,
+        });
+
+        const id = await window.Signal.Data.saveMessage(model.attributes, {
+          Message: Whisper.Message,
+        });
+        model.set({ id });
+
+        const message = MessageController.register(model.id, model);
+        groupModel.addSingleMessage(message);
+
+        const options = groupModel.getSendOptions();
+        message.send(
+          groupModel.wrapSend(
+            textsecure.messaging.removeMember(groupModel.get('id'), groupIdentifiers, options)
+          )
+        );
+      }
+    },
+
+    async leaveGroupNew() {
+      const now = Date.now();
+      if (this.get('type') === 'group') {
+        const groupId = this.get('groupId');
+  
+        if (!groupId) {
+          throw new Error(`leaveGroup/${this.idForLogging()}: No groupId!`);
+        }
+  
+        const groupIdentifiers = this.getRecipients();
+        this.set({ left: true });
+        window.Signal.Data.updateConversation(this.attributes);
+  
+        const model = new window.Whisper.Message({
+          group_update: { left: 'You' },
+          conversationId: this.id,
+          type: 'outgoing',
+          sent_at: now,
+          received_at: now,
+          // received_at_ms: now,
+          // TODO: DESKTOP-722
+        });
+  
+        const id = await window.Signal.Data.saveMessage(model.attributes, {
+          Message: window.Whisper.Message,
+        });
+        model.set({ id });
+  
+        const message = window.MessageController.register(model.id, model);
+        this.addSingleMessage(message);
+  
+        const options = await getSendOptions(this.attributes);
+        message.send(
+          this.wrapSend(
+            window.textsecure.messaging.leaveGroup(
+              groupId,
+              groupIdentifiers,
+              options
+            )
           )
         );
       }
@@ -2383,23 +2689,27 @@
       }
     },
 
-    getProfiles() {
+    async getProfiles() {
       // request all conversation members' keys
       let conversations = [];
       if (this.isPrivate()) {
         conversations = [this];
       } else {
-        conversations = this.get('members')
+        conversations = await this.get('members')
           .map(id => ConversationController.get(id))
-          .filter(Boolean);
+          // .filter(Boolean);
       }
-      return Promise.all(
-        _.map(conversations, conversation => {
-          this.getProfile(conversation.get('uuid'), conversation.get('e164'));
+      // return Promise.all(
+        _.map(conversations, async conversation => {
+          window.log.info("all keys checked inside",conversation.get('e164'),conversation.get('uuid'))
+          if(conversation.get('uuid')!=null) 
+          {await this.getProfile(conversation.get('uuid'));}
         })
-      );
+        window.log.info("all keys checked final")
+      // ).then(()=> window.log.info("all keys checked final"));
     },
  async getProfile(id) {
+   window.log.info("all keys checked inside inside",id)
       if (!textsecure.messaging) {
         throw new Error(
           'Conversation.getProfile: textsecure.messaging not available'
@@ -2537,7 +2847,7 @@
         window.Signal.Data.updateConversation(id, c.attributes);
       }
     },
-  /*  async getProfile(providedUuid, providedE164) {
+    async getProfile2(providedUuid, providedE164) {
       if (!textsecure.messaging) {
         throw new Error(
           'Conversation.getProfile: textsecure.messaging not available'
@@ -2733,7 +3043,7 @@
       }
 
       window.Signal.Data.updateConversation(c.attributes);
-    }, */
+    }, 
     async setProfileName(encryptedName) {
       if (!encryptedName) {
         return;
@@ -2929,14 +3239,57 @@
     },
 
     async destroyMessages() {
+
+      const conversationId = this.id;
+      Whisper.Notifications.remove(
+        Whisper.Notifications.where({
+          conversationId,
+        })
+      );
+
+      let ClearChat = 
+        {
+       senderE164: this.get('e164'),
+       senderUuid: this.get('uuid'),
+      //  senderId: this.isPrivate() ? ConversationController.ensureContactIds({
+      //    e164: this.get('e164'),
+      //    uuid: this.get('uuid'),
+      //  }) : this.get('groupId'),
+      groupId: this.isPrivate() ? null :  this.get('groupId'),
+       hasErrors: false,
+     }
+        
+
+      window.log.info(`Sending ClearChat syncs before`,ClearChat);
+
+      if (ClearChat) {
+        window.log.info(`Sending ${ClearChat} ClearChat syncs`);
+      
+        const {
+          sendOptions,
+        } = ConversationController.prepareForSend(
+          ConversationController.getOurConversationId(),
+          { syncMessage: true }
+        );
+        await this.wrapSend(
+          textsecure.messaging.syncClearChat(ClearChat,sendOptions)
+        );
+      }
+
+
+
+
+
       this.messageCollection.reset([]);
 
       this.set({
         lastMessage: null,
         timestamp: null,
-        active_at: null,
+        // active_at: null,
+        lastMessageStatus: null,
       });
       window.Signal.Data.updateConversation(this.attributes);
+      
 
       await window.Signal.Data.removeAllMessagesInConversation(this.id, {
         MessageCollection: Whisper.MessageCollection,

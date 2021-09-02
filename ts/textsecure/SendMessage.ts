@@ -83,6 +83,7 @@ type MessageOptionsType = {
   sticker?: any;
   reaction?: any;
   timestamp: number;
+  deletedForEveryoneTimestamp?: number;
 };
 
 class Message {
@@ -102,7 +103,7 @@ class Message {
   sticker?: any;
   reaction?: any;
   timestamp: number;
-
+  deletedForEveryoneTimestamp?: number;
   dataMessage: any;
   attachmentPointers?: Array<any>;
 
@@ -121,7 +122,7 @@ class Message {
     this.sticker = options.sticker;
     this.reaction = options.reaction;
     this.timestamp = options.timestamp;
-
+    this.deletedForEveryoneTimestamp = options.deletedForEveryoneTimestamp;
     if (!(this.recipients instanceof Array)) {
       throw new Error('Invalid recipient list');
     }
@@ -256,6 +257,12 @@ class Message {
       proto.profileKey = this.profileKey;
     }
 
+    if (this.deletedForEveryoneTimestamp) {
+      proto.delete = {
+        targetSentTimestamp: this.deletedForEveryoneTimestamp,
+      };
+    }
+
     this.dataMessage = proto;
     return proto;
   }
@@ -307,10 +314,13 @@ export default class MessageSender {
     return window.Signal.Crypto.concatenateBytes(data, padding);
   }
 
-  async makeAttachmentPointer(attachment: AttachmentType) {
-    if (typeof attachment !== 'object' || attachment == null) {
-      return Promise.resolve(undefined);
-    }
+  async makeAttachmentPointer(
+    attachment: Readonly<AttachmentType>
+  ) {
+    // assert(
+    //   typeof attachment === 'object' && attachment !== null,
+    //   'Got null attachment in `makeAttachmentPointer`'
+    // );
 
     const { data, size } = attachment;
     if (!(data instanceof ArrayBuffer) && !ArrayBuffer.isView(data)) {
@@ -359,6 +369,58 @@ export default class MessageSender {
 
     return proto;
   }
+  // async makeAttachmentPointer(attachment: AttachmentType) {
+  //   if (typeof attachment !== 'object' || attachment == null) {
+  //     return Promise.resolve(undefined);
+  //   }
+
+  //   const { data, size } = attachment;
+  //   if (!(data instanceof ArrayBuffer) && !ArrayBuffer.isView(data)) {
+  //     throw new Error(
+  //       `makeAttachmentPointer: data was a '${typeof data}' instead of ArrayBuffer/ArrayBufferView`
+  //     );
+  //   }
+  //   if (data.byteLength !== size) {
+  //     throw new Error(
+  //       `makeAttachmentPointer: Size ${size} did not match data.byteLength ${data.byteLength}`
+  //     );
+  //   }
+
+  //   const padded = this.getPaddedAttachment(data);
+  //   const key = window.libsignal.crypto.getRandomBytes(64);
+  //   const iv = window.libsignal.crypto.getRandomBytes(16);
+
+  //   const result = await Crypto.encryptAttachment(padded, key, iv);
+  //   const id = await this.server.putAttachment(result.ciphertext);
+
+  //   const proto = new window.textsecure.protobuf.AttachmentPointer();
+  //   proto.cdnId = id;
+  //   proto.contentType = attachment.contentType;
+  //   proto.key = key;
+  //   proto.size = attachment.size;
+  //   proto.digest = result.digest;
+
+  //   if (attachment.fileName) {
+  //     proto.fileName = attachment.fileName;
+  //   }
+  //   if (attachment.flags) {
+  //     proto.flags = attachment.flags;
+  //   }
+  //   if (attachment.width) {
+  //     proto.width = attachment.width;
+  //   }
+  //   if (attachment.height) {
+  //     proto.height = attachment.height;
+  //   }
+  //   if (attachment.caption) {
+  //     proto.caption = attachment.caption;
+  //   }
+  //   if (attachment.blurHash) {
+  //     proto.blurHash = attachment.blurHash;
+  //   }
+
+  //   return proto;
+  // }
 
   async queueJobForIdentifier(identifier: string, runJob: () => Promise<any>) {
     const { id } = await window.ConversationController.getOrCreateAndWait(
@@ -378,7 +440,8 @@ export default class MessageSender {
     return queue.add(taskWithTimeout);
   }
 
-  async uploadAttachments(message: Message) {
+  async uploadAttachments(message: Message): Promise<void> {
+    window.log.info("my attachments",message.attachments)
     return Promise.all(
       message.attachments.map(this.makeAttachmentPointer.bind(this))
     )
@@ -394,6 +457,23 @@ export default class MessageSender {
         }
       });
   }
+  // async uploadAttachments(message: Message) {
+  //   window.log.info("upload files my",message.attachments)
+  //   return Promise.all(
+  //     message.attachments.map(this.makeAttachmentPointer.bind(this))
+  //   )
+  //     .then(attachmentPointers => {
+  //       // eslint-disable-next-line no-param-reassign
+  //       message.attachmentPointers = attachmentPointers;
+  //     })
+  //     .catch(error => {
+  //       if (error instanceof Error && error.name === 'HTTPError') {
+  //         throw new MessageError(message, error);
+  //       } else {
+  //         throw error;
+  //       }
+  //     });
+  // }
 
   async uploadLinkPreviews(message: Message) {
     try {
@@ -467,7 +547,7 @@ export default class MessageSender {
   async sendMessage(attrs: MessageOptionsType, options?: SendOptionsType) {
     const message = new Message(attrs);
     const silent = false;
-
+    window.log.info("log while send call sendMessage")
     return Promise.all([
       this.uploadAttachments(message),
       this.uploadThumbnails(message),
@@ -489,6 +569,7 @@ export default class MessageSender {
               }
             },
             silent,
+            false,
             options
           );
         })
@@ -500,6 +581,7 @@ export default class MessageSender {
     messageProto: DataMessageClass,
     callback: (result: CallbackResultType) => void,
     silent?: boolean,
+    call?:boolean,
     options?: SendOptionsType
   ) {
     const rejections = window.textsecure.storage.get(
@@ -510,12 +592,17 @@ export default class MessageSender {
       throw new SignedPreKeyRotationError();
     }
 
+// window.log.info("sending data message silent call ..",silent,call)
+// window.log.info("printing silent call 2",silent,call)
+window.log.info("log while send call sendMessageProto")
+
     const outgoing = new OutgoingMessage(
       this.server,
       timestamp,
       recipients,
       messageProto,
       silent,
+      call,
       callback,
       options
     );
@@ -533,6 +620,7 @@ export default class MessageSender {
     identifiers: Array<string>,
     messageProto: DataMessageClass,
     silent?: boolean,
+    call?:boolean,
     options?: SendOptionsType
   ) {
     return new Promise((resolve, reject) => {
@@ -546,12 +634,14 @@ export default class MessageSender {
         return;
       };
 
+      window.log.info("printing silent call 1",silent,call)
       this.sendMessageProto(
         timestamp,
         identifiers,
         messageProto,
         callback,
         silent,
+        call,
         options
       );
     });
@@ -578,6 +668,7 @@ export default class MessageSender {
         proto,
         callback,
         silent,
+        false,
         options
       );
     });
@@ -585,7 +676,7 @@ export default class MessageSender {
 
   createSyncMessage() {
     const syncMessage = new window.textsecure.protobuf.SyncMessage();
-
+    syncMessage.silent=true;
     // Generate a random int from 1 and 512
     const buffer = window.libsignal.crypto.getRandomBytes(1);
     const paddingLength = (new Uint8Array(buffer)[0] & 0x1ff) + 1;
@@ -610,7 +701,7 @@ export default class MessageSender {
     const myNumber = window.textsecure.storage.user.getNumber();
     const myUuid = window.textsecure.storage.user.getUuid();
     const myDevice = window.textsecure.storage.user.getDeviceId();
-  window.log.info('myNumber:-',myNumber)
+  
     if (myDevice === 1 || myDevice === '1') {
       return Promise.resolve();
     }
@@ -665,7 +756,7 @@ export default class MessageSender {
     syncMessage.sent = sentMessage;
     const contentMessage = new window.textsecure.protobuf.Content();
     contentMessage.syncMessage = syncMessage;
-
+    window.log.info('send sync message :-',contentMessage)
     const silent = true;
     return this.sendIndividualProto(
       myUuid || myNumber,
@@ -895,6 +986,7 @@ export default class MessageSender {
       recipients,
       contentMessage,
       silent,
+      false,
       {
         ...sendOptions,
         online,
@@ -932,19 +1024,31 @@ export default class MessageSender {
     callingMessage: CallingMessageClass,
     sendOptions?: SendOptionsType
   ) {
+    // if(callingMessage.offer) callingMessage.offer.isCall=true;
+    // if(callingMessage.offer) callingMessage.offer.isSilent=false;
     const recipients = [recipientId];
     const finalTimestamp = Date.now();
 
     const contentMessage = new window.textsecure.protobuf.Content();
     contentMessage.callingMessage = callingMessage;
+    let silent=true;
+    let call=false;
+    if(callingMessage.offer){
+       silent = false;
+       call= true;
+    }else{
+      silent = true;
+      call=false;
+    }
+    
 
-    const silent = true;
-
+    window.log.info("calling log for iscall",contentMessage)
     await this.sendMessageProtoAndWait(
       finalTimestamp,
       recipients,
       contentMessage,
       silent,
+      call,
       sendOptions
     );
   }
@@ -1005,6 +1109,97 @@ export default class MessageSender {
       options
     );
   }
+
+  
+
+  async syncClearChat(
+    deletes: {
+      senderUuid?: string;
+      senderE164?: string;
+      groupId: string;
+    },
+    options?: SendOptionsType
+  ) {
+
+    window.log.info(`Sending ClearChat syncs my`,deletes);
+
+    const myNumber = window.textsecure.storage.user.getNumber();
+    const myUuid = window.textsecure.storage.user.getUuid();
+    const myDevice = window.textsecure.storage.user.getDeviceId();
+    if (myDevice !== 1 && myDevice !== '1') {
+      const syncMessage = this.createSyncMessage();
+      syncMessage.delete = [];
+ 
+      const delete1 = new window.textsecure.protobuf.SyncMessage.ClearChat();
+      delete1.senderE164 = deletes.senderE164;
+      delete1.senderUuid = deletes.senderUuid;
+      delete1.groupId = deletes.groupId
+        ? window.Signal.Crypto.fromEncodedBinaryToArrayBuffer(deletes.groupId)
+        : null;
+      syncMessage.clearChat=delete1;
+      const contentMessage = new window.textsecure.protobuf.Content();
+      contentMessage.syncMessage = syncMessage;
+
+      const silent = true;
+      return this.sendIndividualProto(
+        myUuid || myNumber,
+        contentMessage,
+        Date.now(),
+        silent,
+        options
+      );
+    }
+
+    return Promise.resolve();
+  }
+
+
+
+  async syncDeleteMessages(
+    deletes: Array<{
+      senderUuid?: string;
+      senderE164?: string;
+      timestamp: number;
+      groupId: string;
+    }>,
+    options?: SendOptionsType
+  ) {
+
+    window.log.info(`Sending Delete syncs my`,deletes);
+
+    const myNumber = window.textsecure.storage.user.getNumber();
+    const myUuid = window.textsecure.storage.user.getUuid();
+    const myDevice = window.textsecure.storage.user.getDeviceId();
+    if (myDevice !== 1 && myDevice !== '1') {
+      const syncMessage = this.createSyncMessage();
+      syncMessage.delete = [];
+      for (let i = 0; i < deletes.length; i += 1) {
+        const delete1 = new window.textsecure.protobuf.SyncMessage.Delete();
+        delete1.timestamp = deletes[i].timestamp;
+        delete1.senderE164 = deletes[i].senderE164;
+        delete1.senderUuid = deletes[i].senderUuid;
+        delete1.groupId = deletes[i].groupId
+        ? window.Signal.Crypto.fromEncodedBinaryToArrayBuffer(deletes[i].groupId)
+        : null;
+        syncMessage.delete.push(delete1);
+      }
+      const contentMessage = new window.textsecure.protobuf.Content();
+      contentMessage.syncMessage = syncMessage;
+
+      const silent = true;
+      return this.sendIndividualProto(
+        myUuid || myNumber,
+        contentMessage,
+        Date.now(),
+        silent,
+        options
+      );
+    }
+
+    return Promise.resolve();
+  }
+
+
   async syncReadMessages(
     reads: Array<{
       senderUuid?: string;
@@ -1271,6 +1466,7 @@ export default class MessageSender {
         proto,
         callback,
         silent,
+        false,
         options
       );
     });
@@ -1284,6 +1480,7 @@ export default class MessageSender {
     preview: Array<PreviewType> | null,
     sticker: any,
     reaction: any,
+    deletedForEveryoneTimestamp: number | undefined,
     timestamp: number,
     expireTimer: number | undefined,
     profileKey?: ArrayBuffer,
@@ -1299,6 +1496,7 @@ export default class MessageSender {
       preview,
       sticker,
       reaction,
+      deletedForEveryoneTimestamp,
       expireTimer,
       profileKey,
       flags,
@@ -1327,6 +1525,7 @@ export default class MessageSender {
     preview: Array<PreviewType> | null,
     sticker: any,
     reaction: any,
+    deletedForEveryoneTimestamp: number | undefined,
     timestamp: number,
     expireTimer: number | undefined,
     profileKey?: ArrayBuffer,
@@ -1342,6 +1541,7 @@ export default class MessageSender {
         preview,
         sticker,
         reaction,
+        deletedForEveryoneTimestamp,
         expireTimer,
         profileKey,
       },
@@ -1443,6 +1643,7 @@ export default class MessageSender {
     timestamp: number,
     expireTimer: number | undefined,
     profileKey?: ArrayBuffer,
+    deletedForEveryoneTimestamp?: number,
     options?: SendOptionsType
   ) {
     const myE164 = window.textsecure.storage.user.getNumber();
@@ -1458,6 +1659,7 @@ export default class MessageSender {
       reaction,
       expireTimer,
       profileKey,
+      deletedForEveryoneTimestamp,
       group: {
         id: groupId,
         type: window.textsecure.protobuf.GroupContext.Type.DELIVER,
@@ -1620,6 +1822,18 @@ export default class MessageSender {
     proto.group = new window.textsecure.protobuf.GroupContext();
     proto.group.id = stringToArrayBuffer(groupId);
     proto.group.type = window.textsecure.protobuf.GroupContext.Type.QUIT;
+    return this.sendGroupProto(groupIdentifiers, proto, Date.now(), options);
+  }
+
+  async removeMember(
+    groupId: string,
+    groupIdentifiers: Array<string>,
+    options?: SendOptionsType
+  ) {
+    const proto = new window.textsecure.protobuf.DataMessage();
+    proto.group = new window.textsecure.protobuf.GroupContext();
+    proto.group.id = stringToArrayBuffer(groupId);
+    proto.group.type = window.textsecure.protobuf.GroupContext.Type.MEMBER_REMOVE;
     return this.sendGroupProto(groupIdentifiers, proto, Date.now(), options);
   }
   async sendExpirationTimerUpdateToGroup(

@@ -1,10 +1,12 @@
-import { dirname, join } from 'path';
+import { 
+  dirname,
+   join } from 'path';
 import { spawn as spawnEmitter, SpawnOptions } from 'child_process';
 import { readdir as readdirCallback, unlink as unlinkCallback } from 'fs';
 
 import { app, BrowserWindow } from 'electron';
-import { get as getFromConfig } from 'config';
-import { gt } from 'semver';
+// import { get as getFromConfig } from 'config';
+// import { gt } from 'semver';
 import pify from 'pify';
 
 import {
@@ -18,7 +20,7 @@ import {
 } from './common';
 import { LocaleType } from '../types/I18N';
 import { LoggerType } from '../types/Logging';
-import { hexToBinary, verifySignature } from './signature';
+// import { hexToBinary, verifySignature } from './signature';
 import { markShouldQuit } from '../../app/window_state';
 
 const readdir = pify(readdirCallback);
@@ -28,8 +30,8 @@ const SECOND = 1000;
 const MINUTE = SECOND * 60;
 const INTERVAL = MINUTE * 30;
 
-let fileName: string;
-let version: string;
+// let fileName: string;
+// let version: string;
 let updateFilePath: string;
 let installing: boolean;
 let loggerForQuitHandler: LoggerType;
@@ -70,23 +72,30 @@ async function checkDownloadAndInstall(
       return;
     }
 
-    const { fileName: newFileName, version: newVersion } = result;
-    if (fileName !== newFileName || !version || gt(newVersion, version)) {
-      deleteCache(updateFilePath, logger);
-      fileName = newFileName;
-      version = newVersion;
-      updateFilePath = await downloadUpdate(fileName, logger);
-    }
+    const { version: newVersion } = result;
+    logger.info('checkDownloadAndInstall: checking for update...'+" "+newVersion);
+    // if (fileName !== newFileName || !version || gt(newVersion, version)) {
+    //   deleteCache(updateFilePath, logger);
+    //   fileName = newFileName;
+    //   version = newVersion;
+    //   updateFilePath = await downloadUpdate(fileName, logger);
+    // }
 
-    const publicKey = hexToBinary(getFromConfig('updatesPublicKey'));
-    const verified = await verifySignature(updateFilePath, version, publicKey);
-    if (!verified) {
-      // Note: We don't delete the cache here, because we don't want to continually
-      //   re-download the broken release. We will download it only once per launch.
-      throw new Error(
-        `Downloaded update did not pass signature verification (version: '${version}'; fileName: '${fileName}')`
-      );
+    if(newVersion){
+            deleteCache(updateFilePath, logger);
+      // fileName = newFileName;
+      // version = newVersion;
+      updateFilePath = await downloadUpdate(logger);
     }
+    // const publicKey = hexToBinary(getFromConfig('updatesPublicKey'));
+    // const verified = await verifySignature(updateFilePath, version, publicKey);
+    // if (!verified) {
+    //   // Note: We don't delete the cache here, because we don't want to continually
+    //   //   re-download the broken release. We will download it only once per launch.
+    //   throw new Error(
+    //     `Downloaded update did not pass signature verification (version: '${version}'; fileName: '${fileName}')`
+    //   );
+    // }
 
     logger.info('checkDownloadAndInstall: showing dialog...');
     showUpdateDialog(
@@ -101,7 +110,7 @@ async function checkDownloadAndInstall(
 
 function quitHandler() {
   if (updateFilePath && !installing) {
-    verifyAndInstall(updateFilePath, version, loggerForQuitHandler).catch(
+    verifyAndInstall(updateFilePath, loggerForQuitHandler).catch(
       error => {
         loggerForQuitHandler.error(
           'quitHandler: error installing:',
@@ -140,20 +149,20 @@ async function deletePreviousInstallers(logger: LoggerType) {
 
 async function verifyAndInstall(
   filePath: string,
-  newVersion: string,
+  // newVersion: string,
   logger: LoggerType
 ) {
   if (installing) {
     return;
   }
 
-  const publicKey = hexToBinary(getFromConfig('updatesPublicKey'));
-  const verified = await verifySignature(updateFilePath, newVersion, publicKey);
-  if (!verified) {
-    throw new Error(
-      `Downloaded update did not pass signature verification (version: '${newVersion}'; fileName: '${fileName}')`
-    );
-  }
+  // const publicKey = hexToBinary(getFromConfig('updatesPublicKey'));
+  // const verified = await verifySignature(updateFilePath, newVersion, publicKey);
+  // if (!verified) {
+  //   throw new Error(
+  //     `Downloaded update did not pass signature verification (version: '${newVersion}'; fileName: '${fileName}')`
+  //   );
+  // }
 
   await install(filePath, logger);
 }
@@ -221,7 +230,7 @@ function createUpdater(
 ) {
   return async () => {
     try {
-      await verifyAndInstall(updateFilePath, version, logger);
+      await verifyAndInstall(updateFilePath, logger);
       installing = true;
     } catch (error) {
       logger.info(

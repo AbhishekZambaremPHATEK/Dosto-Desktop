@@ -10,7 +10,7 @@ import {
   SendOptionsType,
 } from './SendMessage';
 import {
-  OutgoingIdentityKeyError,
+  // OutgoingIdentityKeyError,
   OutgoingMessageError,
   SendMessageNetworkError,
   UnregisteredUserError,
@@ -27,6 +27,7 @@ export default class OutgoingMessage {
   message: ContentClass;
   callback: (result: CallbackResultType) => void;
   silent?: boolean;
+  call?:boolean;
   plaintext?: Uint8Array;
 
   identifiersCompleted: number;
@@ -45,9 +46,11 @@ export default class OutgoingMessage {
     identifiers: Array<string>,
     message: ContentClass | DataMessageClass,
     silent: boolean | undefined,
+    call : boolean | undefined,
     callback: (result: CallbackResultType) => void,
     options: OutgoingMessageOptionsType = {}
   ) {
+    window.log.info("printing silent call 3",silent,call)
     if (message instanceof window.textsecure.protobuf.DataMessage) {
       const content = new window.textsecure.protobuf.Content();
       content.dataMessage = message;
@@ -62,6 +65,7 @@ export default class OutgoingMessage {
     this.identifiers = identifiers;
     this.callback = callback;
     this.silent = silent;
+    this.call = call;
 
     this.identifiersCompleted = 0;
     this.errors = [];
@@ -123,9 +127,11 @@ export default class OutgoingMessage {
 
   // tslint:disable-next-line max-func-body-length
   async getKeysForIdentifier(identifier: string, updateDevices: Array<number>) {
+    window.log.info('log while send call getKeysForIdentifier my',identifier,updateDevices);
     const handleResult = async (response: ServerKeysType) =>
       Promise.all(
         response.devices.map(async device => {
+          window.log.info('log while send call getKeysForIdentifier my 1');
           if (
             updateDevices === undefined ||
             updateDevices.indexOf(device.deviceId) > -1
@@ -168,6 +174,7 @@ export default class OutgoingMessage {
     const { accessKey } = info;
 
     if (updateDevices === undefined) {
+      window.log.info('log while send call getKeysForIdentifier my 2');
       if (accessKey) {
         return this.server
           .getKeysForIdentifierUnauth(identifier, undefined, { accessKey })
@@ -190,7 +197,7 @@ export default class OutgoingMessage {
     updateDevices.forEach(deviceId => {
       promise = promise.then(async () => {
         let innerPromise;
-
+        window.log.info('log while send call getKeysForIdentifier my 3');
         if (accessKey) {
           innerPromise = this.server
             .getKeysForIdentifierUnauth(identifier, deviceId, { accessKey })
@@ -219,12 +226,13 @@ export default class OutgoingMessage {
             }
             throw new UnregisteredUserError(identifier, e);
           } else {
+            window.log.info("printing this for message id",this)
             throw e;
           }
         });
       });
     });
-
+    window.log.info('log while send call getKeysForIdentifier my end');
     return promise;
   }
 
@@ -235,13 +243,14 @@ export default class OutgoingMessage {
     { accessKey }: { accessKey?: string } = {}
   ) {
     let promise;
-
+    window.log.info("log while send call transmitMessage")
     if (accessKey) {
       promise = this.server.sendMessagesUnauth(
         identifier,
         jsonData,
         timestamp,
         this.silent,
+        this.call,
         this.online,
         { accessKey }
       );
@@ -251,6 +260,7 @@ export default class OutgoingMessage {
         jsonData,
         timestamp,
         this.silent,
+        this.call,
         this.online
       );
     }
@@ -381,11 +391,15 @@ export default class OutgoingMessage {
           ciphers[address.getDeviceId()] = sessionCipher;
 
           const ciphertext = await sessionCipher.encrypt(plaintext);
+          window.log.info("log while send call doSendMessage")
           return {
             type: ciphertext.type,
             destinationDeviceId: address.getDeviceId(),
             destinationRegistrationId: ciphertext.registrationId,
             content: btoa(ciphertext.body),
+            online:this.online,
+            call:this.call,
+            silent:this.silent
           };
         }
       })
@@ -566,27 +580,60 @@ export default class OutgoingMessage {
 
   async sendToIdentifier(identifier: string) {
     try {
+      window.log.info("log while send call sendToIdentifier")
       const updateDevices = await this.getStaleDeviceIdsForIdentifier(
         identifier
       );
+      window.log.info("log while send call sendToIdentifier 1")
       await this.getKeysForIdentifier(identifier, updateDevices);
+      window.log.info("log while send call sendToIdentifier 2")
       await this.reloadDevicesAndSend(identifier, true)();
+      window.log.info("log while send call sendToIdentifier 3")
     } catch (error) {
-      if (error.message === 'Identity key changed') {
-        const newError = new OutgoingIdentityKeyError(
-          identifier,
-          error.originalMessage,
-          error.timestamp,
-          error.identityKey
-        );
-        this.registerError(identifier, 'Identity key changed', newError);
-      } else {
-        this.registerError(
-          identifier,
-          `Failed to retrieve new device keys for number ${identifier}`,
-          error
-        );
-      }
+      window.log.info("log while send call sendToIdentifier 4",error)
+      // if (error.message === 'Identity key changed') {
+    
+        this.sendToIdentifier(identifier)
+        // const updateDevices = await this.getStaleDeviceIdsForIdentifier(
+        //   identifier
+        // );
+        // await this.getKeysForIdentifier(identifier, updateDevices);
+        // await this.reloadDevicesAndSend(identifier, true)();  
+
+        // const conversation = await window.ConversationController.getOrCreateAndWait(
+        //   identifier,
+        //   'private'
+        // );
+
+        // let messages = await window.Signal.Data.getOlderMessagesByConversation(conversation.id,{
+        //   limit: 1,
+        //   MessageCollection: window.Whisper.MessageCollection,
+        // })
+        
+
+        // const c= new window.Whisper.MessageCollection([], {
+        //   conversation: conversation,
+        // });
+
+        // const message = c.get(messages.models[0].attributes.id); 
+  
+        // await message.retrySend();
+        
+        
+      //   const newError = new OutgoingIdentityKeyError(
+      //     identifier,
+      //     error.originalMessage,
+      //     error.timestamp,
+      //     error.identityKey
+      //   );
+      //   this.registerError(identifier, 'Identity key changed', newError);
+      // } else {
+      //   this.registerError(
+      //     identifier,
+      //     `Failed to retrieve new device keys for number ${identifier}`,
+      //     error
+      //   );
+      // }
     }
   }
 }

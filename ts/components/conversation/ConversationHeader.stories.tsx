@@ -49,6 +49,7 @@ const actionProps: PropsActionsType = {
 
   onArchive: action('onArchive'),
   onMoveToInbox: action('onMoveToInbox'),
+  onLeave:action('onLeave')
 };
 
 const housekeepingProps: PropsHousekeepingType = {

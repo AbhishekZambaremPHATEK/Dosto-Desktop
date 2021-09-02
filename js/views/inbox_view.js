@@ -178,9 +178,11 @@
         if (searchInput && searchInput.focus) {
           searchInput.focus();
         }
+        window.localStorage.setItem('loading','false')
       }
     },
     onProgress(count) {
+      window.localStorage.setItem('loading','true')
       const view = this.appLoadingScreen;
       if (view) {
         view.updateProgress(count);

@@ -57,6 +57,7 @@ const makeDefaultActionProps = (): PropsActions => ({
   replyToMessage: action('replyToMessage'),
   retrySend: action('retrySend'),
   deleteMessage: action('deleteMessage'),
+  deleteMessageForEveryone: action('deleteMessageForEveryone'),
   showMessageDetail: action('showMessageDetail'),
   openConversation: action('openConversation'),
   showContactDetail: action('showContactDetail'),
@@ -88,6 +89,7 @@ const stories: Array<MessageStory> = [
           direction: 'incoming',
           authorColor: 'green',
           text: '🔥',
+          canDeleteForEveryone: true,
         }),
       },
       {
@@ -96,6 +98,7 @@ const stories: Array<MessageStory> = [
           direction: 'incoming',
           authorColor: 'green',
           text: 'Hello there from the new world! http://somewhere.com',
+          canDeleteForEveryone: true,
         }),
       },
       {
@@ -104,6 +107,7 @@ const stories: Array<MessageStory> = [
           direction: 'incoming',
           authorColor: 'red',
           text: 'Hello there from the new world!',
+          canDeleteForEveryone: true,
         }),
         makeHouseKeepingProps: () => ({
           ...makeDefaultHousekeepingProps(),
@@ -115,6 +119,7 @@ const stories: Array<MessageStory> = [
           ...baseDataProps,
           direction: 'incoming',
           authorColor: 'grey',
+          canDeleteForEveryone: true,
           text:
             'Hello there from the new world! And this is multiple lines of text. Lines and lines and lines.',
         }),
@@ -123,6 +128,7 @@ const stories: Array<MessageStory> = [
         makeDataProps: () => ({
           ...baseDataProps,
           direction: 'incoming',
+          canDeleteForEveryone: true,
           authorColor: 'deep_orange',
           text:
             'Hello there from the new world! And this is multiple lines of text. Lines and lines and lines.',
@@ -136,6 +142,7 @@ const stories: Array<MessageStory> = [
         makeDataProps: () => ({
           ...baseDataProps,
           direction: 'outgoing',
+          canDeleteForEveryone: true,
           status: 'sent',
           authorColor: 'pink',
           text: '🔥',
@@ -145,6 +152,7 @@ const stories: Array<MessageStory> = [
         makeDataProps: () => ({
           ...baseDataProps,
           direction: 'outgoing',
+          canDeleteForEveryone: true,
           status: 'read',
           authorColor: 'pink',
           text: 'Hello there from the new world! http://somewhere.com',
@@ -155,6 +163,7 @@ const stories: Array<MessageStory> = [
           ...baseDataProps,
           direction: 'outgoing',
           status: 'sent',
+          canDeleteForEveryone: true,
           text: 'Hello there from the new world! 🔥',
         }),
         makeHouseKeepingProps: () => ({
@@ -167,6 +176,7 @@ const stories: Array<MessageStory> = [
           ...baseDataProps,
           direction: 'outgoing',
           status: 'sent',
+          canDeleteForEveryone: true,
           authorColor: 'blue',
           text:
             'Hello there from the new world! And this is multiple lines of text. Lines and lines and lines.',
@@ -1255,6 +1265,7 @@ const stories: Array<MessageStory> = [
         title: spec.title,
         makeDataProps: () => ({
           ...baseDataProps,
+          canDeleteForEveryone: true,
           // tsc disagrees with tslint, I favor safety (tsc)
           // tslint:disable-next-line no-unnecessary-type-assertion
           direction: (spec.outgoing
@@ -1281,6 +1292,7 @@ const stories: Array<MessageStory> = [
         makeDataProps: () => ({
           ...baseDataProps,
           direction: 'incoming',
+          canDeleteForEveryone: true,
           attachments: [
             {
               blurHash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
@@ -1305,6 +1317,7 @@ const stories: Array<MessageStory> = [
           direction: 'outgoing',
           status: 'sent',
           authorColor: 'green',
+          canDeleteForEveryone: true,
           isSticker: true,
           attachments: [
             {
@@ -1323,6 +1336,7 @@ const stories: Array<MessageStory> = [
           ...baseDataProps,
           direction: 'incoming',
           authorColor: 'green',
+          canDeleteForEveryone: true,
           isSticker: true,
           attachments: [
             {

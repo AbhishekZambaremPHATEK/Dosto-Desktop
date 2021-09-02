@@ -14,7 +14,7 @@ import { ContactListItem } from './ContactListItem';
 
 const i18n = setupI18n('en', enMessages);
 const onClick = action('onClick');
-
+const removeMember = action('removeMember');
 storiesOf('Components/ContactListItem', module)
   .add("It's me!", () => {
     return (
@@ -28,6 +28,7 @@ storiesOf('Components/ContactListItem', module)
         profileName="🔥Flames🔥"
         avatarPath={gifUrl}
         onClick={onClick}
+        removeMember={removeMember}
       />
     );
   })
@@ -42,6 +43,7 @@ storiesOf('Components/ContactListItem', module)
           profileName="🔥Flames🔥"
           avatarPath={gifUrl}
           onClick={onClick}
+          removeMember={removeMember}
         />
         <ContactListItem
           i18n={i18n}
@@ -51,6 +53,7 @@ storiesOf('Components/ContactListItem', module)
           profileName="❄️Ice❄️"
           avatarPath={gifUrl}
           onClick={onClick}
+          removeMember={removeMember}
         />
       </div>
     );
@@ -66,6 +69,7 @@ storiesOf('Components/ContactListItem', module)
         isVerified
         avatarPath={gifUrl}
         onClick={onClick}
+        removeMember={removeMember}
       />
     );
   })
@@ -79,6 +83,7 @@ storiesOf('Components/ContactListItem', module)
         phoneNumber="(202) 555-0011"
         profileName="🔥Flames🔥"
         onClick={onClick}
+        removeMember={removeMember}
       />
     );
   })
@@ -90,6 +95,7 @@ storiesOf('Components/ContactListItem', module)
         title="🔥Flames🔥"
         profileName="🔥Flames🔥"
         onClick={onClick}
+        removeMember={removeMember}
       />
     );
   })
@@ -102,6 +108,7 @@ storiesOf('Components/ContactListItem', module)
         profileName="🔥Flames🔥"
         isVerified
         onClick={onClick}
+        removeMember={removeMember}
       />
     );
   })
@@ -112,6 +119,7 @@ storiesOf('Components/ContactListItem', module)
         phoneNumber="(202) 555-0011"
         title="(202) 555-0011"
         onClick={onClick}
+        removeMember={removeMember}
       />
     );
   })
@@ -123,11 +131,14 @@ storiesOf('Components/ContactListItem', module)
         phoneNumber="(202) 555-0011"
         isVerified
         onClick={onClick}
+        removeMember={removeMember}
       />
     );
   })
   .add('No name, no profile, no number', () => {
     return (
-      <ContactListItem i18n={i18n} title="Unknown contact" onClick={onClick} />
+      <ContactListItem i18n={i18n} title="Unknown contact" onClick={onClick}
+      removeMember={removeMember}
+      />
     );
   });

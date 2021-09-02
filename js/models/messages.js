@@ -639,6 +639,7 @@
         timestamp: this.get('sent_at'),
         status: this.getMessagePropStatus(),
         contact: this.getPropsForEmbeddedContact(),
+        canDeleteForEveryone: this.canDeleteForEveryone(),
         canReply: this.canReply(),
         authorTitle: contact.title,
         authorColor,
@@ -957,21 +958,27 @@
           return i18n('leftTheGroup', [
             this.getNameForNumber(groupUpdate.left),
           ]);
-        } if (!fromContact.isMe() && groupUpdate.memberRemove && removedName!==LinkedDeviceProfileName2) {
-          window.log.info("removedMemberFromTheGroup Executed")
+        }
+        if(this.getNameForNumber(fromContact.ourNumber)==removedName)
+        {
+          return i18n('youRemovedFromTheGroup', { name });
+        }
+        if (!fromContact.isMe() && groupUpdate.memberRemove) {
+          window.log.info("removedMemberFromTheGroup Executed",this.getNameForNumber(fromContact.ourNumber))
           return i18n('removedMemberFromTheGroup', { name, removedName });
         }
+
         if (!fromContact) {
           return '';
         }
         if (fromContact.isMe() && groupUpdate.memberRemove) {
-          window.log.info("youRemovedMemberFromTheGroup Executed")
+          window.log.info("youRemovedMemberFromTheGroup Executed",fromContact.isMe())
           messages.push(i18n('youRemovedMemberFromTheGroup', [this.getNameForNumber(groupUpdate.memberRemove)]));
         }
-        if (!fromContact.isMe() && groupUpdate.memberRemove) {
-          window.log.info("youRemovedFromTheGroup Executed")
-          messages.push(i18n('youRemovedFromTheGroup', [fromContact.getTitle()]));
-        }
+        // if (!fromContact.isMe() && groupUpdate.memberRemove) {
+        //   window.log.info("youRemovedFromTheGroup Executed")
+        //   messages.push(i18n('youRemovedFromTheGroup', [fromContact.getTitle()]));
+        // }
         if (fromContact.isMe() && !groupUpdate.memberRemove) {
           messages.push(i18n('youUpdatedTheGroup'));
         }
@@ -1062,9 +1069,10 @@
       if (this.isKeyChange()) {
         const identifier = this.get('key_changed');
         const conversation = this.findContact(identifier);
-        return i18n('safetyNumberChangedGroup', [
-          conversation ? conversation.getTitle() : null,
-        ]);
+        return conversation ? conversation.get('lastMessage') : null
+        // return i18n('safetyNumberChangedGroup', [
+        //   conversation ? conversation.getTitle() : null,
+        // ]);
       }
       const contacts = this.get('contact');
       if (contacts && contacts.length) {
@@ -1506,6 +1514,7 @@
       this.set({ errors: null });
 
       const conversation = this.getConversation();
+      conversation.getProfiles();
       const intendedRecipients = (this.get('recipients') || [])
         .map(identifier => ConversationController.getConversationId(identifier))
         .filter(Boolean);
@@ -1563,6 +1572,7 @@
           previewWithData,
           stickerWithData,
           null,
+          this.get('deletedForEveryoneTimestamp'),
           this.get('sent_at'),
           this.get('expireTimer'),
           profileKey
@@ -1583,6 +1593,7 @@
           previewWithData,
           stickerWithData,
           null,
+          this.get('deletedForEveryoneTimestamp'),
           this.get('sent_at'),
           this.get('expireTimer'),
           profileKey,
@@ -1686,6 +1697,7 @@
           previewWithData,
           stickerWithData,
           null,
+          this.get('deletedForEveryoneTimestamp'),
           this.get('sent_at'),
           this.get('expireTimer'),
           profileKey
@@ -1704,6 +1716,7 @@
         previewWithData,
         stickerWithData,
         null,
+        this.get('deletedForEveryoneTimestamp'),
         this.get('sent_at'),
         this.get('expireTimer'),
         profileKey,
@@ -2597,6 +2610,7 @@
                   },
                   {}
                 );
+                window.log.info("**********", groupUpdate);
                 message.set({ group_update: groupUpdate });
               }
             }
@@ -2724,6 +2738,7 @@
             }
 
             if (dataMessage.profileKey) {
+              window.log.info("hey i am here")
               const profileKey = dataMessage.profileKey.toString('base64');
               if (
                 source === textsecure.storage.user.getNumber() ||
@@ -2779,6 +2794,10 @@
           }
 
           const conversationTimestamp = conversation.get('timestamp');
+
+          if (this.isKeyChange()) {} 
+          else {
+
           if (
             !conversationTimestamp ||
             message.get('sent_at') > conversationTimestamp
@@ -2788,6 +2807,7 @@
               timestamp: message.get('sent_at'),
             });
           }
+        }
 
           MessageController.register(message.id, message);
           conversation.incrementMessageCount();
@@ -2913,6 +2933,29 @@
       // Update the conversation's last message in case this was the last message
       this.getConversation().updateLastMessage();
     },
+    hasSuccessfulDelivery() {
+      return (this.get('sent_to') || []).length !== 0;
+  },
+  canDeleteForEveryone() {
+    // is someone else's message
+    if (this.isIncoming()) {
+        return false;
+    }
+    const conversationId = this.get('conversationId');
+    const conversation = ConversationController.get(conversationId);
+    if (conversation.isMe()) {
+      return false;
+    }
+    // has already been deleted for everyone
+    if (this.get('deletedForEveryone')) {
+        return false;
+    }
+    // is too old to delete
+    if (Date.now() - this.get('sent_at') >  3 * 60 * 60 * 1000) {
+        return false;
+    }
+    return true;
+},
   });
 
   // Receive will be enabled before we enable send

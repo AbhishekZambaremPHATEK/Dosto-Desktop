@@ -33,7 +33,7 @@ interface Props {
   message: MessageProps;
   errors: Array<Error>;
   contacts: Array<Contact>;
-
+  deleteMessageForEveryone:any
   i18n: LocalizerType;
 }
 
@@ -166,12 +166,12 @@ export class MessageDetail extends React.Component<Props> {
   }
 
   public render() {
-    const { errors, message, receivedAt, sentAt, i18n } = this.props;
+    const { errors, message, receivedAt, sentAt, i18n,deleteMessageForEveryone } = this.props;
 
     return (
       <div className="module-message-detail" tabIndex={0} ref={this.focusRef}>
         <div className="module-message-detail__message-container">
-          <Message i18n={i18n} {...message} />
+          <Message {...message} i18n={i18n} deleteMessageForEveryone={deleteMessageForEveryone}/>
         </div>
         <table className="module-message-detail__info">
           <tbody>

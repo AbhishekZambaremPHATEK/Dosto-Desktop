@@ -6,7 +6,7 @@ import { dirname } from 'path';
 import { v4 as getGuid } from 'uuid';
 import { app, autoUpdater, BrowserWindow, dialog, ipcMain } from 'electron';
 import { get as getFromConfig } from 'config';
-import { gt } from 'semver';
+// import { gt } from 'semver';
 import got from 'got';
 
 import {
@@ -69,12 +69,12 @@ async function checkDownloadAndInstall(
       return;
     }
 
-    const { fileName: newFileName, version: newVersion } = result;
-    if (fileName !== newFileName || !version || gt(newVersion, version)) {
+    const {  version: newVersion } = result;
+    if (version) {
       deleteCache(updateFilePath, logger);
-      fileName = newFileName;
+      // fileName = newFileName;
       version = newVersion;
-      updateFilePath = await downloadUpdate(fileName, logger);
+      updateFilePath = await downloadUpdate( logger);
     }
 
     if (!updateFilePath) {

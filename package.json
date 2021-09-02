@@ -56,7 +56,8 @@
     "build:zip": "node scripts/zip-macos-release.js",
     "preverify:ts": "yarn build:typed-scss",
     "verify": "run-p --print-label verify:*",
-    "verify:ts": "tsc --noEmit"
+    "verify:ts": "tsc --noEmit",
+    "pack": "electron-builder -mwl"
   },
   "optionalDependencies": {
     "fs-xattr": "0.3.0"
@@ -126,10 +127,11 @@
     "redux": "4.0.1",
     "redux-logger": "3.0.6",
     "redux-promise-middleware": "6.1.0",
+    "redux-thunk": "^2.3.0",
     "redux-ts-utils": "3.2.2",
     "reselect": "4.0.0",
     "rimraf": "2.6.2",
-    "ringrtc": "https://github.com/signalapp/signal-ringrtc-node.git#de96fa13f04e846bdcb0ae9be8e2dc80a932f2be",
+    "ringrtc": "https://github.com/signalapp/signal-ringrtc-node.git#677ece9c3b1f7ca9abf9f140c9645fb7c7daf5ff",
     "sanitize-filename": "1.6.3",
     "sanitize.css": "11.0.0",
     "semver": "5.4.1",
@@ -212,6 +214,7 @@
     "electron-builder": "22.3.6",
     "electron-mocha": "8.1.1",
     "electron-notarize": "0.1.1",
+    "electron-packager": "^15.2.0",
     "eslint": "4.18.2",
     "eslint-config-airbnb-base": "12.1.0",
     "eslint-config-prettier": "2.9.0",
@@ -290,7 +293,7 @@
         "node_modules/sharp",
         "node_modules/zkgroup/libzkgroup.*"
       ],
-       "target": [
+      "target": [
         "nsis"
       ]
     },

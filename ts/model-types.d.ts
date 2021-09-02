@@ -27,6 +27,8 @@ type TaskResultType = any;
 type MessageAttributesType = {
   id: string;
   serverTimestamp: number;
+  deletedForEveryone: boolean;
+  deletedForEveryoneTimestamp?: number;
 };
 
 declare class MessageModelType extends Backbone.Model<MessageAttributesType> {

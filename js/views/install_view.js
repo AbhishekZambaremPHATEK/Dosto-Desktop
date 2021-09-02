@@ -33,7 +33,7 @@
     },
     initialize(options = {}) {
       window.readyForUpdates();
-
+      window.log.info("my update check 3")
       this.didLink = false;
       this.selectStep(Steps.SCAN_QR_CODE);
       this.connect();

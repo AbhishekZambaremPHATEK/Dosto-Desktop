@@ -12,6 +12,7 @@ import { Avatar } from './Avatar';
 import { CallState } from '../types/Calling';
 import { LocalizerType } from '../types/Util';
 import { CanvasVideoRenderer, GumVideoCapturer } from '../window.d';
+import { CallingHeader } from './CallingHeader';
 
 type CallingButtonProps = {
   classNameSuffix: string;
@@ -52,6 +53,9 @@ export type PropsType = {
   setLocalVideo: (_: SetLocalVideoType) => void;
   setVideoCapturer: (_: SetVideoCapturerType) => void;
   setVideoRenderer: (_: SetVideoRendererType) => void;
+
+  toggleSettings: () => void;
+  // activeCall: ActiveCallType;
 };
 
 type StateType = {
@@ -203,7 +207,21 @@ export class CallScreen extends React.Component<PropsType, StateType> {
       hasLocalAudio,
       hasLocalVideo,
       hasRemoteVideo,
+
+      toggleSettings,
+      i18n,
+      // activeCall,
     } = this.props;
+
+    // const {
+    //   conversation,
+    //   isInSpeakerView,
+    //   presentingSource,
+    //   remoteParticipants,
+    //   showNeedsScreenRecordingPermissionsWarning,
+    //   showParticipantsList,
+    // } = activeCall;
+
     const { showControls } = this.state;
     const isAudioOnly = !hasLocalVideo && !hasRemoteVideo;
 
@@ -227,7 +245,11 @@ export class CallScreen extends React.Component<PropsType, StateType> {
 
     return (
       <div
-        className="module-ongoing-call"
+        // className="module-ongoing-call"
+        className={classNames(
+          'module-calling__container',
+          `module-ongoing-call__container--direct`
+        )}
         onMouseMove={this.showControls}
         role="group"
       >
@@ -237,10 +259,24 @@ export class CallScreen extends React.Component<PropsType, StateType> {
             controlsFadeClass
           )}
         >
-          <div className="module-ongoing-call__header-name">
+          {/* <div className="module-ongoing-call__header-name">
             {callDetails.title}
           </div>
-          {this.renderMessage(callState)}
+          {this.renderMessage(callState)} */}
+        <CallingHeader
+          // canPip
+          i18n={i18n}
+          // isInSpeakerView={isInSpeakerView}
+          // isGroupCall={isGroupCall}
+          message={this.renderMessage(callState)}
+          // participantCount={participantCount}
+          // showParticipantsList={showParticipantsList}
+          title={callDetails.title}
+          // toggleParticipants={toggleParticipants}
+          // togglePip={togglePip}
+          toggleSettings={toggleSettings}
+          // toggleSpeakerView={toggleSpeakerView}
+        />
         </div>
         {hasRemoteVideo
           ? this.renderRemoteVideo()

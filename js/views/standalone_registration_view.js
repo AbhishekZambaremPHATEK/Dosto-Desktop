@@ -12,6 +12,7 @@
     templateName: 'standalone',
     className: 'full-screen-flow',
     initialize() {
+      window.log.info("my update check 4")
       window.readyForUpdates();
 
       this.accountManager = getAccountManager();
