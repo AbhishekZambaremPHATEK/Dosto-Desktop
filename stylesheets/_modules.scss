@@ -13431,7 +13431,7 @@ button.module-conversation-details__action-button {
 .module-main-header {
   -webkit-app-region: var(--draggable-app-region);
 
-  height: calc(#{$header-height} + var(--title-bar-drag-area-height));
+  // height: calc(#{$header-height} + var(--title-bar-drag-area-height));
   width: 100%;
 
   padding-left: 16px;

@@ -709,6 +709,16 @@
   "welcomeToSignal": {
     "message": "Welcome to Dosto"
   },
+  "whatsNew": {
+    "message": "See $whatsNew$ in this update",
+    "description": "Shown in the main window",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "what's new"
+      }
+    }
+  },
   "selectAContact": {
     "message": "Select a contact or group to start chatting."
   },
@@ -2813,5 +2823,29 @@
         "example": "00:01"
       }
     }
+  },
+  "WhatsNew__1": {
+    "message": "Added delete for everyone feature",
+    "description": "Release notes for v5.17"
+  },
+  "WhatsNew__2": {
+    "message": "Added new Dosto updater and whats new information",
+    "description": "Release notes for v5.17"
+  },
+  "WhatsNew__3": {
+    "message": "Now 'clear chat' & 'delete for me' syncs with android/ios",
+    "description": "Release notes for v5.17"
+  },
+  "WhatsNew__4": {
+    "message": "Added input/output audio device option in call",
+    "description": "Release notes for v5.17"
+  },
+  "WhatsNew__5": {
+    "message": "now scroll down on message send fron up",
+    "description": "Release notes for v5.17"
+  },
+  "WhatsNew__6": {
+    "message": "fixed call ringtone on startup issue and many more",
+    "description": "Release notes for v5.17"
   }
 }

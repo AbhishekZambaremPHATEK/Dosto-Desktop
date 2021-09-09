@@ -76,6 +76,11 @@
     templateName: 'two-column',
     className: 'inbox index',
     initialize(options = {}) {
+
+      storage.put('hide-menu-bar', true);
+      window.setAutoHideMenuBar(true);
+      window.setMenuBarVisibility(!true);
+
       this.ready = false;
       this.render();
 
@@ -83,6 +88,8 @@
         el: this.$('.conversation-stack'),
         model: { window: options.window },
       });
+
+      this.renderWhatsNew();
 
       Whisper.events.on('refreshConversation', ({ oldId, newId }) => {
         const convo = this.conversation_stack.lastConversation;
@@ -109,7 +116,8 @@
     },
     render_attributes: {
       welcomeToSignal: i18n('welcomeToSignal'),
-      selectAContact: i18n('selectAContact'),
+      selectAContact: ""
+      // i18n('selectAContact')
     },
     events: {
       click: 'onClick',
@@ -126,6 +134,18 @@
         JSX: Signal.State.Roots.createCallManager(window.reduxStore),
       });
       this.$('.call-manager-placeholder').append(this.callManagerView.el);
+    },
+    renderWhatsNew() {
+      if (this.whatsNewView) {
+        return;
+      }
+      this.whatsNewView = new Whisper.ReactWrapperView({
+        Component: window.Signal.Components.WhatsNew,
+        props: {
+          i18n: window.i18n,
+        },
+      });
+      this.$('.whats-new-placeholder').append(this.whatsNewView.el);
     },
     setupLeftPane() {
       if (this.leftPaneView) {

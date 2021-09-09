@@ -53,6 +53,8 @@ const {
   getCallingNotificationText,
 } = require('../../ts/components/conversation/CallingNotification');
 
+const { WhatsNew } = require('../../ts/components/WhatsNew');
+
 // State
 const { createTimeline } = require('../../ts/state/roots/createTimeline');
 const {
@@ -292,6 +294,7 @@ exports.setup = (options = {}) => {
     Types: {
       Message: MediaGalleryMessage,
     },
+    WhatsNew,
   };
 
   const Roots = {
