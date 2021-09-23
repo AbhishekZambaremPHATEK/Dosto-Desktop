@@ -55,11 +55,14 @@ export interface PropsType {
   clearSearch: () => void;
 
   showArchivedConversations: () => void;
+  // startComposing: () => void;
+  setConverstion: (conversation:boolean) =>void;
 }
 
 interface StateType {
   showingAvatarPopup: boolean;
   popperRoot: HTMLDivElement | null;
+  converstion:boolean
 }
 
 export class MainHeader extends React.Component<PropsType, StateType> {
@@ -73,6 +76,7 @@ export class MainHeader extends React.Component<PropsType, StateType> {
     this.state = {
       showingAvatarPopup: false,
       popperRoot: null,
+      converstion:false
     };
   }
 
@@ -302,13 +306,83 @@ export class MainHeader extends React.Component<PropsType, StateType> {
       searchConversationName,
       searchTerm,
       showArchivedConversations,
+      // startComposing,
+      setConverstion
     } = this.props;
     const { showingAvatarPopup, popperRoot } = this.state;
+
+    const isSearching = Boolean(
+      searchConversationId || searchTerm.trim().length
+    );
 
     const placeholder = searchConversationName
       ? i18n('searchIn', [searchConversationName])
       : i18n('search');
 
+      if(this.state.converstion==true)  return ( <div className="module-main-header">
+      <button
+        onClick={()=>{
+          setConverstion(false)
+          this.setState({
+            converstion: false
+          });
+        }}
+        className="module-left-pane__header__contents__back-button"
+        title={i18n('backToInbox')}
+        aria-label={i18n('backToInbox')}
+        type="button"
+      />
+      {/* <div className="module-left-pane__header__contents__text">
+    
+        New Conversation
+      </div> */}
+              <div className="module-main-header__search">
+          {searchConversationId ? (
+            <button
+              className="module-main-header__search__in-conversation-pill"
+              onClick={this.clearSearch}
+              tabIndex={-1}
+            >
+              <div className="module-main-header__search__in-conversation-pill__avatar-container">
+                <div className="module-main-header__search__in-conversation-pill__avatar" />
+              </div>
+              <div className="module-main-header__search__in-conversation-pill__x-button" />
+            </button>
+          ) : (
+            <button
+              className="module-main-header__search__icon"
+              onClick={this.setFocus}
+              tabIndex={-1}
+            />
+          )}
+          <input
+            type="text"
+            ref={this.inputRef}
+            className={classNames(
+              'module-main-header__search__input',
+              searchTerm
+                ? 'module-main-header__search__input--with-text'
+                : null,
+              searchConversationId
+                ? 'module-main-header__search__input--in-conversation'
+                : null
+            )}
+            placeholder={placeholder}
+            dir="auto"
+            onKeyDown={this.handleKeyDown}
+            value={searchTerm}
+            onChange={this.updateSearch}
+          />
+          {searchTerm ? (
+            <button
+              tabIndex={-1}
+              className="module-main-header__search__cancel-icon"
+              onClick={this.handleXButton}
+            />
+          ) : null}
+        </div>
+    </div>)
+    else{
     return (
       <div className="module-main-header">
         <Manager>
@@ -405,7 +479,22 @@ export class MainHeader extends React.Component<PropsType, StateType> {
             />
           ) : null}
         </div>
+        {!isSearching && (
+          <button
+            aria-label={i18n('newConversation')}
+            className="module-main-header__compose-icon"
+            onClick={()=>{
+              setConverstion(true)
+              this.setState({
+                converstion: true
+              });
+            }}
+            title={i18n('newConversation')}
+            type="button"
+          />
+        )}
       </div>
     );
+      }
   }
 }

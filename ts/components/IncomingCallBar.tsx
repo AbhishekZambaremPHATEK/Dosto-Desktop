@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Tooltip from 'react-tooltip-lite';
 import { Avatar } from './Avatar';
 import { ContactName } from './conversation/ContactName';
@@ -8,7 +8,7 @@ import {
   CallDetailsType,
   DeclineCallType,
 } from '../state/ducks/calling';
-// import { callingTones } from '../util/callingTones';
+import { callingTones } from '../util/callingTones';
 
 export type PropsType = {
   acceptCall: (_: AcceptCallType) => void;
@@ -60,12 +60,12 @@ export const IncomingCallBar = ({
     return null;
   }
 
-  // useEffect(() => {
-  //   callingTones.playRingtone();
-  //   return () => {
-  //     callingTones.stopRingtone();
-  //   };
-  // }, []);
+  useEffect(() => {
+    callingTones.playRingtone();
+    return () => {
+      callingTones.stopRingtone();
+    };
+  }, []);
   
   const {
     avatarPath,

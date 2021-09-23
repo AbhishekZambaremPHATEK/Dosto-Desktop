@@ -1,15 +1,16 @@
-import Measure, { BoundingRect, MeasuredComponentProps } from 'react-measure';
+// import { BoundingRect } from 'react-measure';
 import React from 'react';
-import { List } from 'react-virtualized';
+// import { List } from 'react-virtualized';
 import { debounce, get } from 'lodash';
-
+import { LeftPane_1 } from './LeftPane_1';
+import { LeftPane_2 } from './LeftPane_2';
 import {
-  ConversationListItem,
+  // ConversationListItem,
   PropsData as ConversationListItemPropsType,
 } from './ConversationListItem';
 import {
   PropsDataType as SearchResultsProps,
-  SearchResults,
+  // SearchResults,
 } from './SearchResults';
 import { LocalizerType } from '../types/Util';
 import { cleanId } from './_util';
@@ -34,7 +35,7 @@ export interface PropsType {
 
   // Render Props
   renderExpiredBuildDialog: () => JSX.Element;
-  renderMainHeader: () => JSX.Element;
+  renderMainHeader: (setConverstion:any) => JSX.Element;
   renderMessageSearchResult: (id: string) => JSX.Element;
   renderNetworkStatus: () => JSX.Element;
   renderRelinkDialog: () => JSX.Element;
@@ -42,61 +43,124 @@ export interface PropsType {
 }
 
 // from https://github.com/bvaughn/react-virtualized/blob/fb3484ed5dcc41bffae8eab029126c0fb8f7abc0/source/List/types.js#L5
-type RowRendererParamsType = {
-  index: number;
-  isScrolling: boolean;
-  isVisible: boolean;
-  key: string;
-  parent: Object;
-  style: Object;
-};
+// type RowRendererParamsType = {
+//   index: number;
+//   isScrolling: boolean;
+//   isVisible: boolean;
+//   key: string;
+//   parent: Object;
+//   style: Object;
+// };
 
-export class LeftPane extends React.Component<PropsType> {
+interface StateType {
+  converstion:boolean,
+  // conversations:ConversationListItemPropsType[],
+  // conversations2:ConversationListItemPropsType[]
+}
+
+export class LeftPane extends React.Component<PropsType,StateType> {
   public listRef = React.createRef<any>();
   public containerRef = React.createRef<HTMLDivElement>();
   public setFocusToFirstNeeded = false;
   public setFocusToLastNeeded = false;
+  
+  constructor(props: PropsType) {
+    super(props);
+    this.state = {
+      converstion:false,
+      // conversations:props.conversations ? props.conversations : [],
+      // conversations2:props.conversations ? props.conversations : [],
+    };
+  }
 
-  public renderRow = ({
-    index,
-    key,
-    style,
-  }: RowRendererParamsType): JSX.Element => {
-    const {
-      archivedConversations,
-      conversations,
-      i18n,
-      openConversationInternal,
-      showArchived,
-    } = this.props;
-    if (!conversations || !archivedConversations) {
-      throw new Error(
-        'renderRow: Tried to render without conversations or archivedConversations'
-      );
-    }
+  // componentDidUpdate(_prevProps:any, prevState:any) {
+  //   // if the current page changes, or the search term changes.
+  //   if(prevState.conversations !== this.state.conversations) {
+  //     this.setState({
+  //     conversations2: this.state.conversations
+  //     });
+  //   }
+  //  }
+  // componentDidUpdate(prevProps:any, _prevState:any) {
+  //   // if the current page changes, or the search term changes.
+  //   // window.log.info("updsted 9")
+  //   if(prevProps.conversations !== this.props.conversations) {
+  //     window.log.info("updsted 1")
+  //     this.forceUpdate();
+  //   }
+  //  }
 
-    if (!showArchived && index === conversations.length) {
-      return this.renderArchivedButton({ key, style });
-    }
+  public setConverstion = (converstion:boolean)=>{
+    this.setState({
+      converstion: converstion,
+      // conversations:this.props.conversations ? this.props.conversations : [],
+    });
+  }
 
-    const conversation = showArchived
-      ? archivedConversations[index]
-      : conversations[index];
+  // public renderRow = ({
+  //   index,
+  //   key,
+  //   style,
+  // }: RowRendererParamsType): JSX.Element => {
+  //   const {
+  //     archivedConversations,
+  //     conversations,
+  //     i18n,
+  //     openConversationInternal,
+  //     showArchived,
+  //   } = this.props;
+  //   if (!conversations || !archivedConversations) {
+  //     throw new Error(
+  //       'renderRow: Tried to render without conversations or archivedConversations'
+  //     );
+  //   }
 
-    return (
-      <div
-        key={key}
-        className="module-left-pane__conversation-container"
-        style={style}
-      >
-        <ConversationListItem
-          {...conversation}
-          onClick={openConversationInternal}
-          i18n={i18n}
-        />
-      </div>
-    );
-  };
+  //   if (!showArchived && index === conversations.length) {
+  //     return this.renderArchivedButton({ key, style });
+  //   }
+
+  //   const conversation = showArchived
+  //     ? archivedConversations[index]
+  //     : this.state.converstion ? this.state.conversations2[index]: this.state.conversations[index];
+
+  //   return (
+  //     <>
+      
+
+  //       {conversation && conversation.temp==true ?
+  //             <div
+  //             key={key}
+  //             className="module-left-pane__conversation-container"
+  //             // style={{...style,height:'40px'}}
+  //             style={style}
+  //           >
+  //          <div className="module-conversation-list__item--header" style={{paddingTop:'25px'}}>Contacts & Groups</div>
+       
+  //         </div>
+
+  //         :
+  //         <div
+  //         key={key}
+  //         className="module-left-pane__conversation-container"
+  //         style={style}
+  //       >
+  //         <ConversationListItem
+  //           {...conversation}
+  //           onClick={(id:string)=>{
+  //             // this.setState({
+  //             //   converstion: false,
+  //             // });
+  //             openConversationInternal(id)}}
+  //           i18n={i18n}
+  //         />
+  //       </div>
+  //       }
+     
+
+
+  //     </>
+  //   );
+  // };
 
   public renderArchivedButton = ({
     key,
@@ -285,78 +349,113 @@ export class LeftPane extends React.Component<PropsType> {
       : conversations.length + (archivedConversations.length ? 1 : 0);
   };
 
-  public renderList = ({
-    height,
-    width,
-  }: BoundingRect): JSX.Element | Array<JSX.Element | null> => {
-    const {
-      archivedConversations,
-      i18n,
-      conversations,
-      openConversationInternal,
-      renderMessageSearchResult,
-      startNewConversation,
-      searchResults,
-      showArchived,
-    } = this.props;
+  // public renderList = ({
+  //   height,
+  //   width,
+  // }: BoundingRect): JSX.Element | Array<JSX.Element | null> => {
+  //   const {
+  //     archivedConversations,
+  //     i18n,
+  //     conversations,
+  //     openConversationInternal,
+  //     renderMessageSearchResult,
+  //     startNewConversation,
+  //     searchResults,
+  //     showArchived,
+  //   } = this.props;
 
-    if (searchResults) {
-      return (
-        <SearchResults
-          {...searchResults}
-          height={height || 0}
-          width={width || 0}
-          openConversationInternal={openConversationInternal}
-          startNewConversation={startNewConversation}
-          renderMessageSearchResult={renderMessageSearchResult}
-          i18n={i18n}
-        />
-      );
-    }
+  //   if (searchResults) {
+  //     return (
+  //       <SearchResults
+  //         {...searchResults}
+  //         height={height || 0}
+  //         width={width || 0}
+  //         openConversationInternal={openConversationInternal}
+  //         startNewConversation={startNewConversation}
+  //         renderMessageSearchResult={renderMessageSearchResult}
+  //         i18n={i18n}
+  //       />
+  //     );
+  //   }
 
-    if (!conversations || !archivedConversations) {
-      throw new Error(
-        'render: must provided conversations and archivedConverstions if no search results are provided'
-      );
-    }
+  //   if (!conversations || !archivedConversations) {
+  //     throw new Error(
+  //       'render: must provided conversations and archivedConverstions if no search results are provided'
+  //     );
+  //   }
 
-    const length = this.getLength();
+  //   const length = this.getLength();
 
-    // We ensure that the listKey differs between inbox and archive views, which ensures
-    //   that AutoSizer properly detects the new size of its slot in the flexbox. The
-    //   archive explainer text at the top of the archive view causes problems otherwise.
-    //   It also ensures that we scroll to the top when switching views.
-    const listKey = showArchived ? 1 : 0;
+  //   // We ensure that the listKey differs between inbox and archive views, which ensures
+  //   //   that AutoSizer properly detects the new size of its slot in the flexbox. The
+  //   //   archive explainer text at the top of the archive view causes problems otherwise.
+  //   //   It also ensures that we scroll to the top when switching views.
+  //   const listKey = showArchived ? 1 : 0;
 
-    // Note: conversations is not a known prop for List, but it is required to ensure that
-    //   it re-renders when our conversation data changes. Otherwise it would just render
-    //   on startup and scroll.
-    return (
-      <div
-        aria-live="polite"
-        className="module-left-pane__list"
-        key={listKey}
-        onFocus={this.handleFocus}
-        onKeyDown={this.handleKeyDown}
-        ref={this.containerRef}
-        role="group"
-        tabIndex={-1}
-      >
-        <List
-          className="module-left-pane__virtual-list"
-          conversations={conversations}
-          height={height || 0}
-          onScroll={this.onScroll}
-          ref={this.listRef}
-          rowCount={length}
-          rowHeight={68}
-          rowRenderer={this.renderRow}
-          tabIndex={-1}
-          width={width || 0}
-        />
-      </div>
-    );
-  };
+  //   // Note: conversations is not a known prop for List, but it is required to ensure that
+  //   //   it re-renders when our conversation data changes. Otherwise it would just render
+  //   //   on startup and scroll.
+  //   // if(!this.state.converstion){
+  //   // conversations.map((conversation,index) => {
+  //   //   if(conversation.lastUpdated==undefined || null) conversations.splice(index, 1);
+  //   // })
+  //   // }
+
+  // // old onepage sort code
+  // if(!this.state.converstion){
+  //   let temp=false;
+  //   this.state.conversations.map((conversation,index) => {
+  //     if(conversation.lastUpdated==undefined || null) 
+  //     { 
+  //       if(conversation.temp==true){
+  //         temp=false; 
+  //         this.state.conversations.splice(index, 1);
+  //       }
+  //       if(temp==false) 
+  //       {temp=true; this.state.conversations.splice(index, 0, {...conversation,temp:true}); } 
+  //     }
+  //   })
+  // }
+  //   window.log.info("my conversations",this.state.conversations)
+  //   // let conversations2=this.state.conversations;
+  //   // this.setState({
+  //   //   conversations2: this.state.conversations
+  //   // });
+  //   if(this.state.converstion) {
+  //     this.state.conversations.map((conversation,index) => {
+  //         if(conversation.temp==true){
+  //           this.state.conversations.splice(index, 1);
+  //         }
+  //     })
+  //     this.state.conversations2.sort((a,b) => (a.name==undefined || b.name==undefined) ? 1:((a.name.toLowerCase() > b.name.toLowerCase()) ? 1 : ((b.name.toLowerCase() > a.name.toLowerCase()) ? -1 : 0)))
+  //   }
+
+  //   return (
+  //     <div
+  //       aria-live="polite"
+  //       className="module-left-pane__list"
+  //       key={listKey}
+  //       onFocus={this.handleFocus}
+  //       onKeyDown={this.handleKeyDown}
+  //       ref={this.containerRef}
+  //       role="group"
+  //       tabIndex={-1}
+  //     >
+  //       <List
+  //         className="module-left-pane__virtual-list"
+  //         conversations={this.state.converstion ? this.state.conversations2:this.state.conversations}
+  //         height={height || 0}
+  //         onScroll={this.onScroll}
+  //         ref={this.listRef}
+  //         rowCount={length}
+  //         rowHeight={68}
+  //         rowRenderer={this.renderRow}
+  //         tabIndex={-1}
+  //         width={width || 0}
+  //       />
+  //     </div>
+  //   );
+  // };
 
   public renderArchivedHeader = (): JSX.Element => {
     const { i18n, showInbox } = this.props;
@@ -364,7 +463,10 @@ export class LeftPane extends React.Component<PropsType> {
     return (
       <div className="module-left-pane__archive-header">
         <button
-          onClick={showInbox}
+          onClick={() =>{
+            this.setConverstion(false);
+            showInbox();
+          }}
           className="module-left-pane__to-inbox-button"
           title={i18n('backToInbox')}
         />
@@ -377,12 +479,12 @@ export class LeftPane extends React.Component<PropsType> {
 
   public render(): JSX.Element {
     const {
-      i18n,
-      renderExpiredBuildDialog,
+      // i18n,
+      // renderExpiredBuildDialog,
       renderMainHeader,
-      renderNetworkStatus,
-      renderRelinkDialog,
-      renderUpdateDialog,
+      // renderNetworkStatus,
+      // renderRelinkDialog,
+      // renderUpdateDialog,
       showArchived,
     } = this.props;
 
@@ -390,9 +492,21 @@ export class LeftPane extends React.Component<PropsType> {
     return (
       <div className="module-left-pane">
         <div className="module-left-pane__header">
-          {showArchived ? this.renderArchivedHeader() : renderMainHeader()}
+          {showArchived ? this.renderArchivedHeader() : renderMainHeader(this.setConverstion)}
         </div>
-        {renderExpiredBuildDialog()}
+        {this.state.converstion==true ? (<>
+          {/* <Measure bounds={true}>
+          {({ contentRect, measureRef }: MeasuredComponentProps) => (
+            <div className="module-left-pane__list--measure" ref={measureRef}>
+              <div className="module-left-pane__list--wrapper">
+                {this.renderList(contentRect.bounds!)}
+              </div>
+            </div>
+          )}
+        </Measure> */}
+        <LeftPane_1 parent={this.props}></LeftPane_1>
+        </>):(<>
+        {/* {renderExpiredBuildDialog()}
         {renderRelinkDialog()}
         {renderNetworkStatus()}
         {renderUpdateDialog()}
@@ -409,7 +523,9 @@ export class LeftPane extends React.Component<PropsType> {
               </div>
             </div>
           )}
-        </Measure>
+        </Measure> */}
+        <LeftPane_2 parent={this.props}></LeftPane_2>
+        </>)}
       </div>
     );
   }

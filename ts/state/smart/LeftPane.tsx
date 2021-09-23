@@ -31,8 +31,8 @@ const FilteredSmartRelinkDialog = SmartRelinkDialog as any;
 function renderExpiredBuildDialog(): JSX.Element {
   return <FilteredSmartExpiredBuildDialog />;
 }
-function renderMainHeader(): JSX.Element {
-  return <FilteredSmartMainHeader />;
+function renderMainHeader(setConverstion:any): JSX.Element {
+  return <FilteredSmartMainHeader setConverstion={setConverstion}/>;
 }
 function renderMessageSearchResult(id: string): JSX.Element {
   return <FilteredSmartMessageSearchResult id={id} />;

@@ -197,9 +197,12 @@
         );
         if (searchInput && searchInput.focus) {
           searchInput.focus();
-        }
-        window.localStorage.setItem('loading','false')
+        }    
       }
+      window.localStorage.setItem('loading','false')
+      const ourNumber = textsecure.storage.user.getNumber();
+      const ourUuid = textsecure.storage.user.getUuid();
+      window.textsecure.messaging.server.setStatus(ourUuid,ourNumber,true,false,new Date().getTime());
     },
     onProgress(count) {
       window.localStorage.setItem('loading','true')

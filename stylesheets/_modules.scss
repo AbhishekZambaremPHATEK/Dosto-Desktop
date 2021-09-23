@@ -2807,8 +2807,8 @@ $timer-icons: '55', '50', '45', '40', '35', '30', '25', '20', '15', '10', '05',
   min-width: 0;
   display: block;
 
-  text-align: center;
-  height: 48px;
+  // text-align: center;
+  // height: 48px;
 }
 
 .module-conversation-header__title-flex {
@@ -2817,7 +2817,7 @@ $timer-icons: '55', '50', '45', '40', '35', '30', '25', '20', '15', '10', '05',
   display: inline-flex;
   flex-direction: row;
   align-items: center;
-  height: 48px;
+  // height: 48px;
   max-width: 100%;
 }
 
@@ -11144,16 +11144,16 @@ button.module-image__border-overlay:focus {
   }
 }
 
-.module-message__author-avatar-container {
-  align-items: flex-end;
-  display: flex;
-  justify-content: center;
-  margin-right: 8px;
+// .module-message__author-avatar-container {
+//   align-items: flex-end;
+//   display: flex;
+//   justify-content: center;
+//   margin-right: 8px;
 
-  &--with-reactions {
-    padding-bottom: 12px;
-  }
-}
+//   &--with-reactions {
+//     padding-bottom: 12px;
+//   }
+// }
 
 .module-message__author-avatar {
   @include button-reset;
@@ -11179,94 +11179,94 @@ button.module-image__border-overlay:focus {
   align-items: center;
 }
 
-.module-message__reactions {
-  position: relative;
-  z-index: 2;
-  height: 22px;
-  display: flex;
-  user-select: none;
+// .module-message__reactions {
+//   position: relative;
+//   z-index: 2;
+//   height: 22px;
+//   display: flex;
+//   user-select: none;
 
-  &--incoming {
-    align-self: flex-end;
-    padding-right: 8px;
-    margin-left: 8px;
-  }
-  &--outgoing {
-    align-self: flex-start;
-    padding-left: 8px;
-    margin-right: 8px;
-  }
-}
+//   &--incoming {
+//     align-self: flex-end;
+//     padding-right: 8px;
+//     margin-left: 8px;
+//   }
+//   &--outgoing {
+//     align-self: flex-start;
+//     padding-left: 8px;
+//     margin-right: 8px;
+//   }
+// }
 
-.module-message__reactions__reaction {
-  @include button-reset;
+// .module-message__reactions__reaction {
+//   @include button-reset;
 
-  min-width: 28px;
-  height: 22px;
-  border: 1px solid;
-  border-radius: 33px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+//   min-width: 28px;
+//   height: 22px;
+//   border: 1px solid;
+//   border-radius: 33px;
+//   display: flex;
+//   justify-content: center;
+//   align-items: center;
 
-  &--with-count {
-    min-width: 40px;
-  }
+//   &--with-count {
+//     min-width: 40px;
+//   }
 
-  &__count {
-    @include font-caption-bold;
+//   &__count {
+//     @include font-caption-bold;
 
-    margin-left: 4px;
+//     margin-left: 4px;
 
-    &--no-emoji {
-      margin-left: 0px;
-    }
+//     &--no-emoji {
+//       margin-left: 0px;
+//     }
 
-    @include light-theme {
-      color: $color-gray-60;
-    }
+//     @include light-theme {
+//       color: $color-gray-60;
+//     }
 
-    @include dark-theme {
-      color: $color-gray-25;
-    }
+//     @include dark-theme {
+//       color: $color-gray-25;
+//     }
 
-    &--is-me {
-      @include dark-theme {
-        color: $color-gray-15;
-      }
-    }
-  }
+//     &--is-me {
+//       @include dark-theme {
+//         color: $color-gray-15;
+//       }
+//     }
+//   }
 
-  &:focus {
-    outline: none;
-  }
+//   &:focus {
+//     outline: none;
+//   }
 
-  @include keyboard-mode {
-    &:focus {
-      box-shadow: 0px 0px 0px 2px $color-ultramarine;
-    }
-  }
+//   @include keyboard-mode {
+//     &:focus {
+//       box-shadow: 0px 0px 0px 2px $color-ultramarine;
+//     }
+//   }
 
-  @include light-theme() {
-    border-color: $color-white;
-    background: $color-gray-05;
-  }
+//   @include light-theme() {
+//     border-color: $color-white;
+//     background: $color-gray-05;
+//   }
 
-  @include dark-theme() {
-    border-color: $color-gray-95;
-    background: $color-gray-90;
-  }
+//   @include dark-theme() {
+//     border-color: $color-gray-95;
+//     background: $color-gray-90;
+//   }
 
-  &--is-me {
-    @include dark-theme() {
-      background: $color-gray-60;
-    }
+//   &--is-me {
+//     @include dark-theme() {
+//       background: $color-gray-60;
+//     }
 
-    @include light-theme() {
-      background: $color-gray-25;
-    }
-  }
-}
+//     @include light-theme() {
+//       background: $color-gray-25;
+//     }
+//   }
+// }
 
 // Module: Expire Timer
 
@@ -20144,23 +20144,23 @@ $contact-modal-padding: 18px;
 }
 
 // To limit messages with things forcing them wider, like long attachment names
-.module-message__container {
-  &--incoming {
-    align-self: flex-start;
-  }
+// .module-message__container {
+//   &--incoming {
+//     align-self: flex-start;
+//   }
 
-  &--outgoing {
-    align-self: flex-end;
-  }
+//   &--outgoing {
+//     align-self: flex-end;
+//   }
 
-  &--with-reactions {
-    margin-bottom: -9px;
-  }
+//   &--with-reactions {
+//     margin-bottom: -9px;
+//   }
 
-  &--deleted-for-everyone {
-    font-style: italic;
-  }
-}
+//   &--deleted-for-everyone {
+//     font-style: italic;
+//   }
+// }
 
 .module-message__context {
   &--icon::before {

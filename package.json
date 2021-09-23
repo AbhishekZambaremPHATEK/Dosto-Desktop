@@ -4,7 +4,7 @@
   "description": "Private messaging from your desktop",
   "desktopName": "dosto.desktop",
   "repository": "https://github.com/dostoapp/Dosto-Desktop.git",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "license": "GPL-3.0",
   "author": {
     "name": "mPHATEK Systems Pvt. Ltd.",
@@ -94,6 +94,7 @@
     "intl-tel-input": "12.1.15",
     "jquery": "3.5.0",
     "js-yaml": "3.13.1",
+    "last-seen-ago": "^1.1.0",
     "linkify-it": "2.2.0",
     "lodash": "4.17.15",
     "memoizee": "0.4.14",

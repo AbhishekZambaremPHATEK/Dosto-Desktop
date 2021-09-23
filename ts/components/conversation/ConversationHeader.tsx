@@ -14,6 +14,8 @@ import { InContactsIcon } from '../InContactsIcon';
 import { LocalizerType } from '../../types/Util';
 import { ColorType } from '../../types/Colors';
 import { ConfirmationModal } from '../ConfirmationModal';
+import { WebAPIType } from '../../textsecure/WebAPI';
+import lastSeenAgo from "last-seen-ago";
 
 interface TimerOption {
   name: string;
@@ -73,13 +75,53 @@ export class ConversationHeader extends React.Component<PropsType> {
   public showMenuBound: (event: React.MouseEvent<HTMLButtonElement>) => void;
   public menuTriggerRef: React.RefObject<any>;
   state = {
-    confirmingLeave: false
+    confirmingLeave: false,
+    online:false,
+    lastseen:0,
+    hidden:false
   };
+  server: WebAPIType;
+  myVar:any;
   public constructor(props: PropsType) {
     super(props);
-
+    const OLD_USERNAME = window.storage.get('number_id');
+    const USERNAME = window.storage.get('uuid_id');
+    const PASSWORD = window.storage.get('password');
+    this.server = window.WebAPI.connect({ username:USERNAME||OLD_USERNAME, password:PASSWORD });
     this.menuTriggerRef = React.createRef();
     this.showMenuBound = this.showMenu.bind(this);
+  }
+
+public getStatus(){
+  if(this.props.phoneNumber) this.server.getStatus(this.props.phoneNumber.replace(/\s/g, "").replace('0','+91')).then(res => {
+    res=JSON.parse(res)
+    // window.log.info("my online status response",res)
+    if(res.responsecode=="200") if(res.responsemessage=="success"){
+      // window.log.info("my online status response 1",res)
+      this.setState({
+        online: res.responselist.online,
+        lastseen:res.responselist.lastseen,
+        hidden:res.responselist.hidden
+      });
+    }
+  })
+}
+    public componentWillUnmount()
+    {
+      clearInterval(this.myVar)
+    }
+
+  public componentDidMount() {
+    this.server.getStatus(window.textsecure.storage.user.getNumber()).then(res => {
+      res=JSON.parse(res)
+      if(res.responsecode=="200" && res.responsemessage=="success" && res.responselist.hidden==false){
+        // window.log.info("my online status response 1",res)
+        this.getStatus();
+        this.myVar = setInterval(()=>{
+          this.getStatus();
+        }, 5000);
+      }
+    })
   }
 
   public showMenu(event: React.MouseEvent<HTMLButtonElement>) {
@@ -359,6 +401,17 @@ export class ConversationHeader extends React.Component<PropsType> {
     );
   }
 
+  public formatAMPM(date:any) {
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+    var ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    minutes = minutes < 10 ? '0'+minutes : minutes;
+    var strTime = hours + ':' + minutes + ' ' + ampm;
+    return strTime;
+  }
+
   public render() {
     const { id } = this.props;
     const triggerId = `conversation-${id}`;
@@ -372,8 +425,25 @@ export class ConversationHeader extends React.Component<PropsType> {
         {this.renderBackButton()}
         <div className="module-conversation-header__title-container">
           <div className="module-conversation-header__title-flex">
-            {this.renderAvatar()}
+          {this.renderAvatar()}
+            <ul style={{listStyleType: 'none',padding:'0px',margin:'0px'}}>
+            <li>
+            <div className="module-conversation-header__title-flex">
+           
             {this.renderTitle()}
+          </div>
+            </li>
+            <li>
+            {!this.state.hidden ? 
+                this.state.online ? <>&nbsp;&nbsp;Online</>:
+                this.state.lastseen!=0 ? 
+                  lastSeenAgo.getLastSeen(this.state.lastseen/1000).search("month")==-1 && lastSeenAgo.getLastSeen(this.state.lastseen/1000).search("year")==-1? <>&nbsp;&nbsp;Last seen {lastSeenAgo.getLastSeen(this.state.lastseen/1000)}</> : 
+                  <>&nbsp;&nbsp;Last seen, {new Date(this.state.lastseen).toDateString()+", "+this.formatAMPM(new Date(this.state.lastseen))}</>:
+                '':
+              ''
+            }
+            </li>
+            </ul>
           </div>
         </div>
         {this.renderExpirationLength()}
@@ -401,7 +471,7 @@ export class ConversationHeader extends React.Component<PropsType> {
         >
           {i18n('ConversationDetailsActions--leave-group-modal-content')}
         </ConfirmationModal>
-      )}
+        )}
       </div>
     );
   }

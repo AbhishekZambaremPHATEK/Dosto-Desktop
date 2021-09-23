@@ -2824,12 +2824,26 @@
       }
     }
   },
+  "emptyInboxMessage": {
+    "message": "Click the $composeIcon$ above and search for your contacts or groups to message.",
+    "description": "Shown in the left-pane when the inbox is empty",
+    "placeholders": {
+      "composeIcon": {
+        "content": "$1",
+        "example": "compose button"
+      }
+    }
+  },
+  "composeIcon": {
+    "message": "compose button",
+    "description": "Shown in the left-pane when the inbox is empty. Describes the button that composes a new message."
+  },
   "WhatsNew__1": {
-    "message": "Added delete for everyone feature",
+    "message": "By default, global menus are hidden, however you can change that in preferences",
     "description": "Release notes for v5.17"
   },
   "WhatsNew__2": {
-    "message": "Added new Dosto updater and whats new information",
+    "message": "Redesign left panel UI - separated contact list from conversations",
     "description": "Release notes for v5.17"
   },
   "WhatsNew__3": {

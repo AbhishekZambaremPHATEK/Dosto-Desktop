@@ -13,6 +13,7 @@ import { LocalizerType } from '../types/Util';
 import { ColorType } from '../types/Colors';
 
 export type PropsData = {
+  temp?:'group' | 'direct';
   id: string;
   phoneNumber?: string;
   color?: ColorType;

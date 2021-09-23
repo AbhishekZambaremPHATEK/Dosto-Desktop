@@ -1,5 +1,5 @@
 Arguments: 
-  C:\Program Files\nodejs\node.exe C:\Users\kailas.shimpi\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js add ringrtc
+  C:\Program Files\nodejs\node.exe C:\Users\kailas.shimpi\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js add @types/last-seen-ago
 
 PATH: 
   C:\Users\kailas.shimpi\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\local\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\kailas.shimpi\bin;C:\Program Files\Java\jdk1.8.0_211\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0;C:\WINDOWS\System32\OpenSSH;C:\Program Files\Git\cmd;C:\Program Files\nodejs;C:\Users\kailas.shimpi\AppData\Local\Microsoft\WindowsApps;C:\Program Files\Java\jdk1.7.0_80\bin;C:\Program Files\Java\jdk1.7.0_80\jre\bin;C:\Users\kailas.shimpi\AppData\Roaming\npm;C:\Python27;C:\Users\kailas.shimpi\AppData\Local\Programs\Microsoft VS Code\bin;C:\Program Files\Git\usr\bin\vendor_perl;C:\Program Files\Git\usr\bin\core_perl
@@ -14,7 +14,7 @@ Platform:
   win32 x64
 
 Trace: 
-  Error: https://registry.yarnpkg.com/ringrtc: Not found
+  Error: https://registry.yarnpkg.com/@types%2flast-seen-ago: Not found
       at Request.params.callback [as _callback] (C:\Users\kailas.shimpi\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:66988:18)
       at Request.self.callback (C:\Users\kailas.shimpi\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:140662:22)
       at Request.emit (events.js:210:5)
@@ -33,7 +33,7 @@ npm manifest:
     "description": "Private messaging from your desktop",
     "desktopName": "dosto.desktop",
     "repository": "https://github.com/dostoapp/Dosto-Desktop.git",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "license": "GPL-3.0",
     "author": {
       "name": "mPHATEK Systems Pvt. Ltd.",
@@ -123,6 +123,7 @@ npm manifest:
       "intl-tel-input": "12.1.15",
       "jquery": "3.5.0",
       "js-yaml": "3.13.1",
+      "last-seen-ago": "^1.1.0",
       "linkify-it": "2.2.0",
       "lodash": "4.17.15",
       "memoizee": "0.4.14",
@@ -10935,6 +10936,11 @@ Lockfile:
     integrity sha512-0Fo5oir+O9jnXu5EefYbVK+mHMBeEVEy2cmctR1O1NECcCkPRreJKrS6Qt/j3KC2C148Dfo9i3pCmCMsdqGr0g==
     dependencies:
       graceful-fs "^4.1.9"
+  
+  last-seen-ago@^1.1.0:
+    version "1.1.0"
+    resolved "https://registry.yarnpkg.com/last-seen-ago/-/last-seen-ago-1.1.0.tgz#161abaad919f1210de02cb25999cff72b73e300a"
+    integrity sha512-4nZMd4xtlMkQ8RybiplSswTbjsrHXW4LwQnR28Wx3hfZP6ZeRypPrNqisuhUXgGuf+KQ9H6BGHAq2ca0tV0BWQ==
   
   latest-version@^3.0.0, latest-version@^3.1.0:
     version "3.1.0"

@@ -602,6 +602,8 @@ export type WebAPIType = {
   registerSupportForUnauthenticatedDelivery: () => Promise<any>;
   removeSignalingKey: () => Promise<void>;
   requestVerificationSMS: (number: string) => Promise<any>;
+  getStatus: (number: string) => Promise<any>;
+  setStatus: (uuid: string,number:string,online:boolean,hidden:boolean,lastsee:string) => Promise<any>;
   requestVerificationVoice: (number: string) => Promise<any>;
   sendMessages: (
     destination: string,
@@ -746,6 +748,8 @@ export function initialize({
       registerSupportForUnauthenticatedDelivery,
       removeSignalingKey,
       requestVerificationSMS,
+      getStatus,
+      setStatus,
       requestVerificationVoice,
       sendMessages,
       sendMessagesUnauth,
@@ -1645,6 +1649,29 @@ export function initialize({
         `${fixedScheme}/v1/websocket/provisioning/?agent=OWD&version=${clientVersion}`,
         { certificateAuthority, proxyUrl }
       );
+    }
+
+    async function getStatus(number: string) {
+      return _ajax({
+        call: 'accounts',
+        httpType: 'GET',
+        urlParameters: `/getOnlineStatus/${number}`,
+      });
+    }
+
+    async function setStatus(uuid: string,number:string,online:boolean,hidden:boolean,lastsee:string) {
+      return _ajax({
+        call: 'accounts',
+        httpType: 'PUT',
+        urlParameters: `/saveOnlineStatus`,
+        jsonData:{
+          uuid, 
+          number, 
+          online, 
+          hidden, 
+          lastsee
+        }
+      });
     }
   }
 }

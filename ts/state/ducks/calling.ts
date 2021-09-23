@@ -228,17 +228,19 @@ async function doCallStateChange(
   const { callDetails, callState } = payload;
   const { isIncoming } = callDetails;
   if (callState === CallState.Ringing && isIncoming) {
-    if(window.localStorage.getItem('loading')=='false') await callingTones.playRingtone();
+    let loading=window.localStorage.getItem('loading');
+    loading!=null && JSON.parse(loading)===false && await callingTones.playRingtone();
+    // if(window.localStorage.getItem('loading')=='false') await callingTones.playRingtone();
     await showCallNotification(callDetails);
     bounceAppIconStart();
   }
   if (callState !== CallState.Ringing) {
-    if(window.localStorage.getItem('loading')=='false') callingTones.stopRingtone();
+    callingTones.stopRingtone();
     bounceAppIconStop();
   }
   if (callState === CallState.Ended) {
-    // tslint:disable-next-line no-floating-promises
-    if(window.localStorage.getItem('loading')=='false') callingTones.playEndCall();
+    let loading=window.localStorage.getItem('loading');
+    loading!=null && JSON.parse(loading)===false && callingTones.playEndCall();
   }
   return payload;
 }

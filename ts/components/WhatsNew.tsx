@@ -26,9 +26,9 @@ export const WhatsNew = ({ i18n }: PropsType): JSX.Element => {
 
   const viewReleaseNotes = () => {
     setReleaseNotes({
-      date: new Date('09/02/2021'),
+      date: new Date('09/21/2021'),
       version: packageJson.version,
-      features: ['WhatsNew__1', 'WhatsNew__2','WhatsNew__3', 'WhatsNew__4','WhatsNew__5', 'WhatsNew__6'],
+      features: ['WhatsNew__1', 'WhatsNew__2'],
     });
   };
 
@@ -40,7 +40,7 @@ export const WhatsNew = ({ i18n }: PropsType): JSX.Element => {
           i18n={i18n}
           onClose={() => setReleaseNotes(undefined)}
           // title={i18n('WhatsNew__modal-title')}
-          title="what's new"
+          title="What's New"
         >
           <>
             <span>

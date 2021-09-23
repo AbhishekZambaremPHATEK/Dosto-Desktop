@@ -292,6 +292,9 @@ try {
   });
 
   ipc.on('get-ready-for-shutdown', async () => {
+    const ourNumber = textsecure.storage.user.getNumber();
+    const ourUuid = textsecure.storage.user.getUuid();
+    await window.textsecure.messaging.server.setStatus(ourUuid,ourNumber,false,false,new Date().getTime());
     const { shutdown } = window.Events || {};
     if (!shutdown) {
       window.log.error('preload shutdown handler: shutdown method not found');
